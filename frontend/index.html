@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Cyber Sentinel XDR</title>
+
+    <link
+        rel="stylesheet"
+        href="/assets/dashboard.css"
+    >
+</head>
+
+<body>
+
+<div class="app">
+
+    <aside class="sidebar">
+
+        <div class="brand">
+            <div class="brand-icon">CS</div>
+
+            <div>
+                <div class="brand-title">
+                    CYBER SENTINEL
+                </div>
+
+                <div class="brand-subtitle">
+                    XDR PLATFORM
+                </div>
+            </div>
+        </div>
+
+        <nav>
+
+            <div class="nav-section">
+                SECURITY OPERATIONS
+            </div>
+
+            <a class="nav-item active">
+                <span>◈</span>
+                SOC Overview
+            </a>
+
+            <a class="nav-item">
+                <span>◉</span>
+                Live Alerts
+            </a>
+
+            <a class="nav-item">
+                <span>◆</span>
+                Incidents
+            </a>
+
+            <a class="nav-item">
+                <span>⌁</span>
+                Attack Timeline
+            </a>
+
+            <div class="nav-section">
+                THREAT ANALYSIS
+            </div>
+
+            <a class="nav-item">
+                <span>◎</span>
+                Threat Intelligence
+            </a>
+
+            <a class="nav-item">
+                <span>◌</span>
+                IOC Explorer
+            </a>
+
+            <a class="nav-item">
+                <span>◇</span>
+                MITRE ATT&CK
+            </a>
+
+            <a class="nav-item">
+                <span>⊙</span>
+                Entity Graph
+            </a>
+
+            <div class="nav-section">
+                OPERATIONS
+            </div>
+
+            <a class="nav-item">
+                <span>▣</span>
+                Investigation
+            </a>
+
+            <a class="nav-item">
+                <span>⚡</span>
+                Response Lab
+            </a>
+
+            <a class="nav-item">
+                <span>▤</span>
+                Reports
+            </a>
+
+        </nav>
+
+        <div class="system-status">
+            <span class="status-dot"></span>
+
+            <div>
+                <strong>LAB ENVIRONMENT</strong>
+                <small>Monitoring active</small>
+            </div>
+        </div>
+
+    </aside>
+
+
+    <main class="main">
+
+        <header class="topbar">
+
+            <div>
+                <div class="page-kicker">
+                    SECURITY OPERATIONS CENTER
+                </div>
+
+                <h1>
+                    XDR Command Center
+                </h1>
+            </div>
+
+            <div class="topbar-right">
+
+                <div class="live-indicator">
+                    <span></span>
+                    LIVE
+                </div>
+
+                <div class="analyst">
+                    <div class="avatar">
+                        A
+                    </div>
+
+                    <div>
+                        <strong>Security Analyst</strong>
+                        <small>LAB-01</small>
+                    </div>
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <section class="metrics">
+
+            <div class="metric-card">
+
+                <div class="metric-label">
+                    ACTIVE INCIDENTS
+                </div>
+
+                <div class="metric-value">
+                    07
+                </div>
+
+                <div class="metric-change">
+                    ↑ 3 requiring attention
+                </div>
+
+            </div>
+
+
+            <div class="metric-card critical">
+
+                <div class="metric-label">
+                    CRITICAL ALERTS
+                </div>
+
+                <div class="metric-value">
+                    03
+                </div>
+
+                <div class="metric-change">
+                    Immediate investigation
+                </div>
+
+            </div>
+
+
+            <div class="metric-card">
+
+                <div class="metric-label">
+                    SOURCES MONITORED
+                </div>
+
+                <div class="metric-value">
+                    24
+                </div>
+
+                <div class="metric-change">
+                    ↑ 6 today
+                </div>
+
+            </div>
+
+
+            <div class="metric-card">
+
+                <div class="metric-label">
+                    DETECTIONS / HR
+                </div>
+
+                <div class="metric-value">
+                    142
+                </div>
+
+                <div class="metric-change">
+                    Correlation engine active
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <section class="dashboard-grid">
+
+            <div class="panel attack-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <div class="panel-kicker">
+                            THREAT ACTIVITY
+                        </div>
+
+                        <h2>
+                            Attack Activity
+                        </h2>
+                    </div>
+
+                    <span class="panel-badge">
+                        LAST 24 HOURS
+                    </span>
+
+                </div>
+
+                <div class="attack-chart">
+
+                    <div class="chart-line line-one"></div>
+                    <div class="chart-line line-two"></div>
+                    <div class="chart-line line-three"></div>
+
+                    <div class="chart-bars">
+                        <span style="height:22%"></span>
+                        <span style="height:35%"></span>
+                        <span style="height:28%"></span>
+                        <span style="height:45%"></span>
+                        <span style="height:32%"></span>
+                        <span style="height:68%"></span>
+                        <span style="height:52%"></span>
+                        <span style="height:76%"></span>
+                        <span style="height:48%"></span>
+                        <span style="height:88%"></span>
+                        <span style="height:61%"></span>
+                        <span style="height:94%"></span>
+                    </div>
+
+                </div>
+
+                <div class="chart-labels">
+                    <span>00:00</span>
+                    <span>04:00</span>
+                    <span>08:00</span>
+                    <span>12:00</span>
+                    <span>16:00</span>
+                    <span>20:00</span>
+                </div>
+
+            </div>
+
+
+            <div class="panel severity-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <div class="panel-kicker">
+                            RISK DISTRIBUTION
+                        </div>
+
+                        <h2>
+                            Severity
+                        </h2>
+                    </div>
+
+                </div>
+
+                <div class="severity-list">
+
+                    <div class="severity-row">
+                        <span>Critical</span>
+                        <div class="severity-track">
+                            <div
+                                class="severity-fill critical-fill"
+                                style="width:18%"
+                            ></div>
+                        </div>
+                        <strong>18%</strong>
+                    </div>
+
+                    <div class="severity-row">
+                        <span>High</span>
+                        <div class="severity-track">
+                            <div
+                                class="severity-fill high-fill"
+                                style="width:37%"
+                            ></div>
+                        </div>
+                        <strong>37%</strong>
+                    </div>
+
+                    <div class="severity-row">
+                        <span>Medium</span>
+                        <div class="severity-track">
+                            <div
+                                class="severity-fill medium-fill"
+                                style="width:31%"
+                            ></div>
+                        </div>
+                        <strong>31%</strong>
+                    </div>
+
+                    <div class="severity-row">
+                        <span>Low</span>
+                        <div class="severity-track">
+                            <div
+                                class="severity-fill low-fill"
+                                style="width:14%"
+                            ></div>
+                        </div>
+                        <strong>14%</strong>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <section class="panel">
+
+            <div class="panel-header">
+
+                <div>
+                    <div class="panel-kicker">
+                        DETECTION STREAM
+                    </div>
+
+                    <h2>
+                        Recent Security Events
+                    </h2>
+                </div>
+
+                <button class="view-button">
+                    VIEW ALL
+                </button>
+
+            </div>
+
+
+            <div class="event-table">
+
+                <div class="table-head">
+                    <span>TIME</span>
+                    <span>SOURCE</span>
+                    <span>DETECTION</span>
+                    <span>MITRE</span>
+                    <span>RISK</span>
+                    <span>STATUS</span>
+                </div>
+
+
+                <div class="table-row">
+
+                    <span>06:02:41</span>
+
+                    <span class="source">
+                        10.10.10.25
+                    </span>
+
+                    <span>
+                        Brute Force Pattern
+                    </span>
+
+                    <span class="mitre">
+                        T1110
+                    </span>
+
+                    <span class="risk critical-text">
+                        92
+                    </span>
+
+                    <span class="status critical-status">
+                        CRITICAL
+                    </span>
+
+                </div>
+
+
+                <div class="table-row">
+
+                    <span>06:01:18</span>
+
+                    <span class="source">
+                        10.10.10.31
+                    </span>
+
+                    <span>
+                        Network Reconnaissance
+                    </span>
+
+                    <span class="mitre">
+                        T1046
+                    </span>
+
+                    <span class="risk high-text">
+                        78
+                    </span>
+
+                    <span class="status high-status">
+                        HIGH
+                    </span>
+
+                </div>
+
+
+                <div class="table-row">
+
+                    <span>05:59:03</span>
+
+                    <span class="source">
+                        10.10.10.17
+                    </span>
+
+                    <span>
+                        Suspicious Process
+                    </span>
+
+                    <span class="mitre">
+                        T1059
+                    </span>
+
+                    <span class="risk high-text">
+                        74
+                    </span>
+
+                    <span class="status high-status">
+                        HIGH
+                    </span>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <section class="bottom-grid">
+
+            <div class="panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <div class="panel-kicker">
+                            TOP SOURCES
+                        </div>
+
+                        <h2>
+                            Suspicious IP Activity
+                        </h2>
+                    </div>
+
+                </div>
+
+                <div class="ip-list">
+
+                    <div class="ip-row">
+                        <span>01</span>
+                        <strong>10.10.10.25</strong>
+                        <small>BRUTE FORCE</small>
+                        <b>92</b>
+                    </div>
+
+                    <div class="ip-row">
+                        <span>02</span>
+                        <strong>10.10.10.31</strong>
+                        <small>RECON</small>
+                        <b>78</b>
+                    </div>
+
+                    <div class="ip-row">
+                        <span>03</span>
+                        <strong>10.10.10.17</strong>
+                        <small>PROCESS</small>
+                        <b>74</b>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <div class="panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <div class="panel-kicker">
+                            ATTACK FRAMEWORK
+                        </div>
+
+                        <h2>
+                            MITRE Activity
+                        </h2>
+                    </div>
+
+                </div>
+
+                <div class="mitre-cards">
+
+                    <div class="mitre-card">
+                        <strong>T1110</strong>
+                        <span>Brute Force</span>
+                    </div>
+
+                    <div class="mitre-card">
+                        <strong>T1046</strong>
+                        <span>Network Discovery</span>
+                    </div>
+
+                    <div class="mitre-card">
+                        <strong>T1059</strong>
+                        <span>Command Shell</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+<script>
+async function checkHealth() {
+    try {
+        const response = await fetch("/api/health");
+
+        if (!response.ok) {
+            throw new Error("API unavailable");
+        }
+
+        const data = await response.json();
+
+        console.log(
+            "Cyber Sentinel XDR:",
+            data
+        );
+
+    } catch (error) {
+        console.error(
+            "XDR API error:",
+            error
+        );
+    }
+}
+
+checkHealth();
+</script>
+
+</body>
+</html>

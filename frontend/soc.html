@@ -1,0 +1,6662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Sentinel XDR — SOC</title>
+    <link rel="stylesheet" href="/assets/soc.css">
+
+    <style>
+        /* =====================================================
+           INVESTIGATION TIMELINE
+           PHASE 6.9.2 FRONTEND
+           ===================================================== */
+
+        .investigation-timeline {
+            margin-top: 28px;
+        }
+
+        .timeline-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 16px;
+        }
+
+        .timeline-count {
+            font-size: 10px;
+            color: #7d8998;
+            letter-spacing: 1px;
+        }
+
+        .timeline {
+            position: relative;
+            margin-left: 10px;
+            padding-left: 28px;
+        }
+
+        .timeline::before {
+            content: "";
+            position: absolute;
+            left: 6px;
+            top: 8px;
+            bottom: 8px;
+            width: 1px;
+            background: rgba(255,255,255,.10);
+        }
+
+        .timeline-event {
+            position: relative;
+            margin-bottom: 16px;
+            padding: 14px 16px;
+            background: rgba(255,255,255,.018);
+            border: 1px solid rgba(255,255,255,.07);
+            border-radius: 8px;
+        }
+
+        .timeline-event:last-child {
+            margin-bottom: 0;
+        }
+
+        .timeline-marker {
+            position: absolute;
+            left: -28px;
+            top: 17px;
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            background: #38d9a9;
+            border: 3px solid #090e16;
+            box-shadow: 0 0 0 1px rgba(56,217,169,.35);
+        }
+
+        .timeline-marker.detection {
+            background: #5aa9ff;
+            box-shadow: 0 0 0 1px rgba(90,169,255,.35);
+        }
+
+        .timeline-marker.incident_created {
+            background: #ffb84d;
+            box-shadow: 0 0 0 1px rgba(255,184,77,.35);
+        }
+
+        .timeline-marker.incident_updated {
+            background: #b18cff;
+            box-shadow: 0 0 0 1px rgba(177,140,255,.35);
+        }
+
+        .timeline-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            margin-bottom: 8px;
+        }
+
+        .timeline-sequence {
+            font-size: 9px;
+            font-weight: 800;
+            color: #5d6978;
+            letter-spacing: 1px;
+        }
+
+        .timeline-time {
+            font-family: monospace;
+            font-size: 10px;
+            color: #7f8b9b;
+        }
+
+        .timeline-event-type {
+            display: inline-block;
+            margin-bottom: 7px;
+            padding: 3px 7px;
+            border-radius: 4px;
+            background: rgba(56,217,169,.08);
+            color: #69d9bb;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+
+        .timeline-event-title {
+            display: block;
+            color: #dce5ef;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .timeline-event-description {
+            color: #7e8998;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+
+        .timeline-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 9px;
+            color: #566273;
+            font-size: 9px;
+        }
+
+        .timeline-meta strong {
+            color: #8290a1;
+        }
+
+        .timeline-detection {
+            border-left: 2px solid rgba(90,169,255,.55);
+        }
+
+        .timeline-incident {
+            border-left: 2px solid rgba(255,184,77,.55);
+        }
+
+        .timeline-update {
+            border-left: 2px solid rgba(177,140,255,.55);
+        }
+
+        .timeline-empty {
+            padding: 18px;
+            text-align: center;
+            color: #596575;
+            font-size: 11px;
+            border: 1px dashed rgba(255,255,255,.08);
+            border-radius: 8px;
+        }
+
+        .incident-report-actions {
+            display: flex;
+            gap: 4px;
+            margin-left: 8px;
+            align-items: center;
+        }
+
+        .report-action-btn {
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            background: rgba(15, 23, 42, 0.75);
+            color: #cbd5e1;
+            border-radius: 5px;
+            padding: 3px 6px;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.15s ease;
+        }
+
+        .report-action-btn:hover {
+            border-color: rgba(96, 165, 250, 0.75);
+            color: #ffffff;
+            background: rgba(30, 41, 59, 0.95);
+        }
+
+</style>
+
+
+<style>
+
+/* =========================================================
+   PHASE 7.3 — INVESTIGATION TIMELINE & EVENT PIVOTING
+   ========================================================= */
+
+.timeline-controls {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.02);
+}
+
+.timeline-control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.timeline-control-group label {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    opacity: 0.55;
+}
+
+.timeline-filter-select {
+    min-width: 190px;
+    padding: 8px 10px;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 7px;
+    background: rgba(0,0,0,0.2);
+    color: inherit;
+    font-size: 11px;
+}
+
+.timeline-control-summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    opacity: 0.6;
+}
+
+.timeline-control-summary strong {
+    font-size: 15px;
+    opacity: 1;
+}
+
+.timeline-event-list {
+    display: grid;
+    gap: 10px;
+}
+
+.timeline-event-hidden {
+    display: none !important;
+}
+
+.timeline-pivot {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 13px;
+    padding-top: 11px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+.timeline-pivot-button {
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 6px;
+    padding: 7px 10px;
+    background: rgba(255,255,255,0.04);
+    color: inherit;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+}
+
+.timeline-pivot-button:hover {
+    background: rgba(255,255,255,0.08);
+}
+
+.timeline-pivot code {
+    font-size: 10px;
+    opacity: 0.6;
+}
+
+.timeline-no-pivot {
+    margin-top: 11px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    opacity: 0.4;
+}
+
+@media (max-width: 700px) {
+
+    .timeline-controls {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .timeline-filter-select {
+        width: 100%;
+    }
+
+    .timeline-pivot {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+}
+
+</style>
+
+
+
+<style>
+
+/* =========================================================
+   PHASE 7.5 — MITRE ATT&CK INVESTIGATION VIEW
+   ========================================================= */
+
+.phase75-mitre-investigation {
+    margin-top: 18px;
+}
+
+.phase75-mitre-summary {
+    display: grid;
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.phase75-mitre-summary-item {
+    padding: 13px;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 9px;
+    background: rgba(255,255,255,.025);
+}
+
+.phase75-mitre-summary-item span,
+.phase75-mitre-card-label,
+.phase75-mitre-card-grid span {
+    display: block;
+    font-size: 9px;
+    letter-spacing: .12em;
+    opacity: .5;
+}
+
+.phase75-mitre-summary-item strong {
+    display: block;
+    margin-top: 6px;
+    font-size: 19px;
+}
+
+.phase75-mitre-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.phase75-mitre-card {
+    padding: 15px;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 10px;
+    background: rgba(255,255,255,.018);
+    transition:
+        border-color .15s ease,
+        background .15s ease,
+        transform .15s ease;
+}
+
+.phase75-mitre-card:hover {
+    border-color: rgba(255,255,255,.16);
+    background: rgba(255,255,255,.035);
+    transform: translateX(2px);
+}
+
+.phase75-mitre-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.phase75-mitre-card-header > div {
+    min-width: 0;
+}
+
+.phase75-mitre-card-header strong {
+    display: block;
+    margin-top: 5px;
+    font-size: 17px;
+}
+
+.phase75-mitre-card-header code {
+    display: block;
+    margin-top: 5px;
+    font-size: 10px;
+    opacity: .45;
+    word-break: break-all;
+}
+
+.phase75-mitre-confirmed {
+    padding: 5px 8px;
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 5px;
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    white-space: nowrap;
+    opacity: .7;
+}
+
+.phase75-mitre-card-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 15px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,.06);
+}
+
+.phase75-mitre-card-grid strong,
+.phase75-mitre-card-grid code {
+    display: block;
+    margin-top: 5px;
+    font-size: 11px;
+    word-break: break-word;
+}
+
+.phase75-mitre-pivot {
+    width: 100%;
+    margin-top: 14px;
+    padding: 9px 12px;
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 6px;
+    background: rgba(255,255,255,.035);
+    color: inherit;
+    font-family: inherit;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    cursor: pointer;
+}
+
+.phase75-mitre-pivot:hover {
+    background: rgba(255,255,255,.075);
+    border-color: rgba(255,255,255,.18);
+}
+
+.phase75-mitre-pivot:focus {
+    outline: 1px solid rgba(255,255,255,.25);
+    outline-offset: 2px;
+}
+
+@media (max-width: 700px) {
+
+    .phase75-mitre-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .phase75-mitre-card-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .phase75-mitre-card-header {
+        flex-direction: column;
+    }
+
+}
+
+</style>
+
+
+<style>
+.phase76-context-box {
+    margin-top: 18px;
+    border: 1px solid rgba(120,150,180,0.20);
+    border-radius: 12px;
+    padding: 18px;
+    background: rgba(8,15,24,0.72);
+}
+
+.phase76-context-grid {
+    display: grid;
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.phase76-context-card {
+    padding: 13px;
+    border-radius: 9px;
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.07);
+}
+
+.phase76-context-label {
+    font-size: 10px;
+    letter-spacing: 1px;
+    opacity: 0.55;
+    margin-bottom: 6px;
+}
+
+.phase76-context-value {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.phase76-notes {
+    margin-top: 18px;
+}
+
+.phase76-note {
+    padding: 13px;
+    margin-top: 10px;
+    border-left: 3px solid rgba(100,180,255,0.7);
+    background: rgba(255,255,255,0.025);
+    border-radius: 7px;
+}
+
+.phase76-note-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.phase76-note-action {
+    font-weight: 700;
+    font-size: 12px;
+}
+
+.phase76-note-time {
+    font-size: 11px;
+    opacity: 0.55;
+}
+
+.phase76-note-body {
+    margin-top: 8px;
+    line-height: 1.5;
+    font-size: 13px;
+}
+
+@media (max-width: 900px) {
+    .phase76-context-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+
+<style>
+.phase77-workflow-box {
+    margin-top: 18px;
+    border: 1px solid rgba(120,150,180,0.20);
+    border-radius: 12px;
+    padding: 18px;
+    background: rgba(8,15,24,0.72);
+}
+
+.phase77-workflow-banner {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 14px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: rgba(80,110,140,0.10);
+    border: 1px solid rgba(120,150,180,0.18);
+    font-size: 12px;
+}
+
+.phase77-workflow-banner strong {
+    letter-spacing: 0.08em;
+}
+
+.phase77-workflow-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.phase77-workflow-card {
+    padding: 14px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(120,150,180,0.14);
+}
+
+.phase77-workflow-label {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    opacity: 0.65;
+    margin-bottom: 7px;
+}
+
+.phase77-workflow-value {
+    font-size: 14px;
+    font-weight: 700;
+    word-break: break-word;
+}
+
+.phase77-status-title {
+    margin-top: 18px;
+    margin-bottom: 10px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+}
+
+.phase77-status-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.phase77-status-button {
+    border: 1px solid rgba(120,150,180,0.24);
+    background: rgba(255,255,255,0.035);
+    color: inherit;
+    border-radius: 7px;
+    padding: 9px 13px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.phase77-status-button:hover:not(:disabled) {
+    background: rgba(255,255,255,0.08);
+}
+
+.phase77-status-button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.phase77-status-button.phase77-status-active {
+    border-color: rgba(100,180,140,0.55);
+    background: rgba(100,180,140,0.12);
+}
+
+.phase77-workflow-status {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 7px;
+    background: rgba(100,180,140,0.08);
+    border: 1px solid rgba(100,180,140,0.18);
+    font-size: 12px;
+}
+
+@media (max-width: 800px) {
+    .phase77-workflow-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="app-shell">
+
+    <aside class="sidebar">
+
+        <div class="brand">
+            <div class="brand-mark">CS</div>
+
+            <div>
+                <div class="brand-title">
+                    CYBER SENTINEL
+                </div>
+
+                <div class="brand-subtitle">
+                    XDR PLATFORM
+                </div>
+            </div>
+        </div>
+
+        <nav class="nav">
+
+            <div class="nav-section">
+                OPERATIONS
+            </div>
+
+            <a class="nav-item active" href="/soc">
+                <span>◉</span>
+                <span>SOC Overview</span>
+            </a>
+
+            <a class="nav-item" href="/soc">
+                <span>⚡</span>
+                <span>Live Alerts</span>
+            </a>
+
+            <a class="nav-item" href="/soc">
+                <span>◈</span>
+                <span>Incidents</span>
+            </a>
+
+            <a class="nav-item" href="/soc">
+                <span>⌁</span>
+                <span>Attack Timeline</span>
+            </a>
+
+            <div class="nav-section">
+                INTELLIGENCE
+            </div>
+
+            <a class="nav-item" href="/soc">
+                <span>◆</span>
+                <span>Threat Intelligence</span>
+            </a>
+
+            <a class="nav-item" href="/soc">
+                <span>◇</span>
+                <span>IOC Explorer</span>
+            </a>
+
+            <a class="nav-item" href="/soc">
+                <span>△</span>
+                <span>MITRE ATT&CK</span>
+            </a>
+
+            <a class="nav-item" href="/soc">
+                <span>◎</span>
+                <span>Entity Graph</span>
+            </a>
+
+            <div class="nav-section">
+                RESPONSE
+            </div>
+
+            <a class="nav-item" href="/soc">
+                <span>▣</span>
+                <span>Investigation</span>
+            </a>
+
+            <a class="nav-item" href="/soc">
+                <span>⚙</span>
+                <span>Response Lab</span>
+            </a>
+
+            <a class="nav-item" href="/soc">
+                <span>▤</span>
+                <span>Reports</span>
+            </a>
+
+        </nav>
+
+        <div class="sidebar-footer">
+
+            <div class="lab-dot"></div>
+
+            <div>
+                <strong>LAB ENVIRONMENT</strong>
+                <small>Controlled XDR Mode</small>
+            </div>
+
+        </div>
+
+    </aside>
+
+
+    <main class="main">
+
+        <header class="topbar">
+
+            <div>
+
+                <div class="eyebrow">
+                    SECURITY OPERATIONS CENTER
+                </div>
+
+                <h1>
+                    XDR Command Center
+                </h1>
+
+            </div>
+
+            <div class="topbar-right">
+
+                <div class="live-status">
+                    <span class="live-dot"></span>
+                    LIVE
+                </div>
+
+                <div class="analyst">
+
+                    <div class="avatar">
+                        A
+                    </div>
+
+                    <div>
+                        <strong>Analyst</strong>
+                        <small>LAB SESSION</small>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </header>
+
+
+        <section class="content">
+
+            <div class="posture-card">
+
+                <div>
+
+                    <div class="section-label">
+                        SECURITY POSTURE
+                    </div>
+
+                    <div id="posture" class="posture-value">
+                        LOADING
+                    </div>
+
+                    <div id="posture-description">
+                        Loading security telemetry...
+                    </div>
+
+                </div>
+
+                <div class="posture-right">
+                    <div class="pulse-ring"></div>
+                    <span>MONITORING</span>
+                </div>
+
+            </div>
+
+
+            <div class="metrics-grid">
+
+                <div class="metric-card">
+                    <span class="metric-label">ASSETS</span>
+                    <strong id="metric-assets">—</strong>
+                    <small>Monitored assets</small>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-label">SECURITY EVENTS</span>
+                    <strong id="metric-events">—</strong>
+                    <small>Collected telemetry</small>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-label">DETECTIONS</span>
+                    <strong id="metric-detections">—</strong>
+                    <small>Detection signals</small>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-label">INCIDENTS</span>
+                    <strong id="metric-incidents">—</strong>
+                    <small>Correlated incidents</small>
+                </div>
+
+                <div class="metric-card">
+                    <span class="metric-label">IOCs</span>
+                    <strong id="metric-iocs">—</strong>
+                    <small>Threat indicators</small>
+                </div>
+
+                <div class="metric-card risk-card">
+                    <span class="metric-label">GRAPH MAX RISK</span>
+                    <strong id="metric-risk">—</strong>
+                    <small id="risk-label">Risk propagation</small>
+                </div>
+
+            </div>
+
+
+            <section class="panel alerts-panel">
+
+                <div class="panel-header">
+
+                    <div>
+                        <div class="section-label">
+                            LIVE ALERT STREAM
+                        </div>
+
+                        <h2>Detection Activity</h2>
+                    </div>
+
+                    <div class="stream-controls">
+
+                        <span id="stream-status" class="stream-status">
+                            CONNECTING
+                        </span>
+
+                        <button id="refresh-btn" class="refresh-btn">
+                            REFRESH
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div class="alert-summary">
+
+                    <div class="alert-stat critical">
+                        <span>CRITICAL</span>
+                        <strong id="critical-count">0</strong>
+                    </div>
+
+                    <div class="alert-stat high">
+                        <span>HIGH</span>
+                        <strong id="high-count">0</strong>
+                    </div>
+
+                    <div class="alert-stat medium">
+                        <span>MEDIUM</span>
+                        <strong id="medium-count">0</strong>
+                    </div>
+
+                    <div class="alert-stat low">
+                        <span>LOW</span>
+                        <strong id="low-count">0</strong>
+                    </div>
+
+                    <div class="alert-stat info">
+                        <span>INFO</span>
+                        <strong id="info-count">0</strong>
+                    </div>
+
+                </div>
+
+
+                <div id="alert-stream" class="alert-stream">
+                    <div class="empty-state">
+                        Loading alerts...
+                    </div>
+                </div>
+
+            </section>
+
+
+            <div class="two-column">
+
+                <section class="panel">
+
+                    <div class="panel-header">
+
+                        <div>
+
+                            <div class="section-label">
+                                INCIDENT MANAGEMENT
+                            </div>
+
+                            <h2>Recent Incidents</h2>
+
+                        </div>
+
+                        <span id="incident-count" class="panel-count">
+                            0
+                        </span>
+
+                    </div>
+
+                    <div id="incident-list" class="incident-list">
+                        <div class="empty-state">
+                            Loading incidents...
+                        </div>
+                    </div>
+
+                </section>
+
+
+                <section class="panel">
+
+                    <div class="panel-header">
+
+                        <div>
+
+                            <div class="section-label">
+                                RISK DISTRIBUTION
+                            </div>
+
+                            <h2>Incident Severity</h2>
+
+                        </div>
+
+                    </div>
+
+                    <div id="severity-bars" class="severity-bars">
+                        <div class="empty-state">
+                            Loading severity...
+                        </div>
+                    </div>
+
+                    <div class="detection-distribution">
+
+                        <div class="section-label">
+                            TOP DETECTION TYPES
+                        </div>
+
+                        <div id="detection-types">
+                            Loading...
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </div>
+
+
+            <section class="panel graph-panel">
+
+                <div class="panel-header">
+
+                    <div>
+
+                        <div class="section-label">
+                            ENTITY & ATTACK GRAPH
+                        </div>
+
+                        <h2>Live Security Relationship Graph</h2>
+
+                        <p class="panel-description">
+                            Click any entity to open its
+                            investigation context.
+                        </p>
+
+                    </div>
+
+                    <div class="graph-summary">
+
+                        <div>
+                            <span>ENTITIES</span>
+                            <strong id="graph-entities">—</strong>
+                        </div>
+
+                        <div>
+                            <span>RELATIONSHIPS</span>
+                            <strong id="graph-relationships">—</strong>
+                        </div>
+
+                        <div>
+                            <span>HIGH RISK</span>
+                            <strong id="graph-high-risk">—</strong>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div id="entity-graph" class="entity-graph">
+                    <div class="graph-loading">
+                        Building entity graph...
+                    </div>
+                </div>
+
+
+                <div class="graph-legend">
+
+                    <span>
+                        <i class="legend-dot ip"></i>
+                        IP
+                    </span>
+
+                    <span>
+                        <i class="legend-dot ioc"></i>
+                        IOC
+                    </span>
+
+                    <span>
+                        <i class="legend-dot detection"></i>
+                        DETECTION
+                    </span>
+
+                    <span>
+                        <i class="legend-dot incident"></i>
+                        INCIDENT
+                    </span>
+
+                    <span>
+                        <i class="legend-dot asset"></i>
+                        ASSET
+                    </span>
+
+                    <span>
+                        <i class="legend-dot mitre"></i>
+                        MITRE
+                    </span>
+
+                    <span>
+                        <i class="legend-dot domain"></i>
+                        DOMAIN
+                    </span>
+
+                    <span>
+                        <i class="legend-dot process"></i>
+                        PROCESS
+                    </span>
+
+                </div>
+
+            </section>
+
+
+            <!-- =================================================
+                 INVESTIGATION WORKSPACE
+                 ================================================= -->
+
+            <section
+                id="investigation-panel"
+                class="panel investigation-panel hidden"
+            >
+
+                <div class="panel-header">
+
+                    <div>
+
+                        <div class="section-label">
+                            INVESTIGATION WORKSPACE
+                        </div>
+
+                        <h2>
+                            Entity Investigation Context
+                        </h2>
+
+                    </div>
+
+                    <button
+                        id="close-investigation"
+                        class="refresh-btn"
+                    >
+                        CLOSE
+                    </button>
+
+                </div>
+
+
+                <div
+                    id="investigation-loading"
+                    class="investigation-loading hidden"
+                >
+                    Loading investigation context...
+                </div>
+
+
+                <div
+                    id="investigation-content"
+                    class="investigation-content"
+                >
+
+                    <div class="investigation-hero">
+
+                        <div>
+
+                            <span class="investigation-type">
+                                ENTITY
+                            </span>
+
+                            <h3 id="investigation-label">
+                                —
+                            </h3>
+
+                            <code id="investigation-id">
+                                —
+                            </code>
+
+                        </div>
+
+
+                        <div class="investigation-risk">
+
+                            <span>
+                                ENTITY RISK
+                            </span>
+
+                            <strong id="investigation-risk-value">
+                                0
+                            </strong>
+
+                            <small id="investigation-priority">
+                                NORMAL
+                            </small>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         PHASE 7.1 — INVESTIGATION WORKSPACE OVERVIEW
+                         ================================================= -->
+
+                    <div
+                        id="investigation-workspace-overview"
+                        class="investigation-workspace-overview"
+                    >
+
+                        <div class="workspace-overview-header">
+
+                            <div>
+
+                                <div class="section-label">
+                                    INVESTIGATION OVERVIEW
+                                </div>
+
+                                <h4>
+                                    Analyst Workspace
+                                </h4>
+
+                            </div>
+
+                            <span
+                                id="workspace-recommended-action"
+                                class="workspace-action-badge"
+                            >
+                                ACTION —
+                            </span>
+
+                        </div>
+
+
+                        <div class="workspace-overview-grid">
+
+                            <div class="workspace-field">
+
+                                <span>
+                                    INCIDENT KEY
+                                </span>
+
+                                <strong
+                                    id="workspace-incident-key"
+                                >
+                                    —
+                                </strong>
+
+                            </div>
+
+
+                            <div class="workspace-field">
+
+                                <span>
+                                    STATUS
+                                </span>
+
+                                <strong
+                                    id="workspace-status"
+                                >
+                                    —
+                                </strong>
+
+                            </div>
+
+
+                            <div class="workspace-field">
+
+                                <span>
+                                    SEVERITY
+                                </span>
+
+                                <strong
+                                    id="workspace-severity"
+                                >
+                                    —
+                                </strong>
+
+                            </div>
+
+
+                            <div class="workspace-field">
+
+                                <span>
+                                    RISK
+                                </span>
+
+                                <strong
+                                    id="workspace-risk"
+                                >
+                                    0 / 100
+                                </strong>
+
+                            </div>
+
+
+                            <div class="workspace-field">
+
+                                <span>
+                                    SOURCE IP
+                                </span>
+
+                                <code
+                                    id="workspace-source-ip"
+                                >
+                                    —
+                                </code>
+
+                            </div>
+
+
+                            <div class="workspace-field">
+
+                                <span>
+                                    TARGET ASSET
+                                </span>
+
+                                <strong
+                                    id="workspace-target-asset"
+                                >
+                                    —
+                                </strong>
+
+                            </div>
+
+
+                            <div class="workspace-field">
+
+                                <span>
+                                    DETECTIONS
+                                </span>
+
+                                <strong
+                                    id="workspace-detection-count"
+                                >
+                                    0
+                                </strong>
+
+                            </div>
+
+
+                            <div class="workspace-field">
+
+                                <span>
+                                    MITRE TECHNIQUES
+                                </span>
+
+                                <strong
+                                    id="workspace-mitre-count"
+                                >
+                                    0
+                                </strong>
+
+                            </div>
+
+
+                            <div class="workspace-field">
+
+                                <span>
+                                    IOCS
+                                </span>
+
+                                <strong
+                                    id="workspace-ioc-count"
+                                >
+                                    0
+                                </strong>
+
+                            </div>
+
+
+                            <div class="workspace-field">
+
+                                <span>
+                                    TIMELINE EVENTS
+                                </span>
+
+                                <strong
+                                    id="workspace-timeline-count"
+                                >
+                                    0
+                                </strong>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="workspace-attack-story">
+
+                            <div class="section-label">
+                                ATTACK STORY
+                            </div>
+
+                            <p
+                                id="workspace-attack-story"
+                            >
+                                No attack story available.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="investigation-stats">
+
+                        <div>
+                            <span>RELATED ENTITIES</span>
+                            <strong id="related-count">0</strong>
+                        </div>
+
+                        <div>
+                            <span>RELATIONSHIPS</span>
+                            <strong id="relationship-count">0</strong>
+                        </div>
+
+                        <div>
+                            <span>GLOBAL MAX RISK</span>
+                            <strong id="global-risk">0</strong>
+                        </div>
+
+                        <div>
+                            <span>TIMELINE EVENTS</span>
+                            <strong id="timeline-count">0</strong>
+                        </div>
+
+                    </div>
+
+
+                    <div class="investigation-columns">
+
+                        <div>
+
+                            <div class="section-label">
+                                RELATED ENTITIES
+                            </div>
+
+                            <div
+                                id="related-entities"
+                                class="related-entities"
+                            >
+                                —
+                            </div>
+
+                        </div>
+
+
+                        <div>
+
+                            <div class="section-label">
+                                RELATIONSHIPS
+                            </div>
+
+                            <div
+                                id="investigation-relationships"
+                                class="investigation-relationships"
+                            >
+                                —
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         PHASE 6.9.2 — INVESTIGATION TIMELINE
+                         ================================================= -->
+
+                    <div
+                        id="investigation-timeline"
+                        class="investigation-timeline"
+                    >
+
+                        <div class="timeline-header">
+
+                            <div>
+
+                                <div class="section-label">
+                                    INCIDENT TIMELINE
+                                </div>
+
+                                <h4>
+                                    Chronological Investigation Events
+                                </h4>
+
+                            </div>
+
+                            <span
+                                id="timeline-header-count"
+                                class="timeline-count"
+                            >
+                                0 EVENTS
+                            </span>
+
+                        </div>
+
+
+                        <div
+                            id="timeline-events"
+                            class="timeline"
+                        >
+                            <div class="timeline-empty">
+                                No timeline events.
+                            </div>
+                        </div>
+
+                    </div>
+
+
+                    <!-- =================================================
+                         ADVANCED INVESTIGATION
+                         ================================================= -->
+
+                    <div
+                        id="advanced-investigation"
+                        class="advanced-investigation"
+                    >
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <section class="panel">
+
+                <div class="panel-header">
+
+                    <div>
+
+                        <div class="section-label">
+                            GRAPH RELATIONSHIPS
+                        </div>
+
+                        <h2>
+                            Attack Chain
+                        </h2>
+
+                    </div>
+
+                    <span
+                        id="graph-risk-badge"
+                        class="risk-badge"
+                    >
+                        RISK —
+                    </span>
+
+                </div>
+
+
+                <div
+                    id="relationship-list"
+                    class="relationship-list"
+                >
+                    <div class="empty-state">
+                        Loading relationships...
+                    </div>
+                </div>
+
+            </section>
+
+
+            <footer class="footer">
+
+                <div>
+                    CYBER SENTINEL XDR
+                    <span>•</span>
+                    LAB ENVIRONMENT
+                </div>
+
+                <div id="backend-status">
+                    BACKEND CONNECTING
+                </div>
+
+            </footer>
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<script>
+
+/* =========================================================
+   STATE
+   ========================================================= */
+
+const state = {
+    overview: null,
+    alerts: null,
+    graph: null,
+    investigation: null
+};
+
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+
+function escapeHtml(value) {
+
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+function formatTimestamp(timestamp) {
+
+    if (!timestamp) {
+        return "—";
+    }
+
+    try {
+
+        return new Date(timestamp)
+            .toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit"
+            });
+
+    } catch {
+
+        return timestamp;
+    }
+}
+
+
+function formatDateTime(timestamp) {
+
+    if (!timestamp) {
+        return "—";
+    }
+
+    try {
+
+        return new Date(timestamp)
+            .toLocaleString([], {
+                year: "numeric",
+                month: "short",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit"
+            });
+
+    } catch {
+
+        return timestamp;
+    }
+}
+
+
+function severityClass(value) {
+
+    return String(value || "INFO")
+        .toLowerCase()
+        .replace(/[^a-z]/g, "");
+}
+
+
+function entityClass(type) {
+
+    return String(type || "unknown")
+        .toLowerCase()
+        .replace(/[^a-z_]/g, "");
+}
+
+
+function setText(id, value) {
+
+    const element =
+        document.getElementById(id);
+
+    if (element) {
+        element.textContent = value;
+    }
+}
+
+
+/* =========================================================
+   OVERVIEW
+   ========================================================= */
+
+async function loadOverview() {
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/soc/overview",
+                {
+                    cache: "no-store"
+                }
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                `Overview HTTP ${response.status}`
+            );
+        }
+
+        const data =
+            await response.json();
+
+        state.overview = data;
+
+        renderOverview(data);
+
+        setText(
+            "backend-status",
+            "BACKEND OPERATIONAL"
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Overview error:",
+            error
+        );
+
+        setText(
+            "backend-status",
+            "BACKEND ERROR"
+        );
+    }
+}
+
+
+function renderOverview(data) {
+
+    setText(
+        "posture",
+        data.posture || "UNKNOWN"
+    );
+
+    const descriptions = {
+        CRITICAL:
+            "Critical risk indicators detected.",
+
+        HIGH:
+            "High-priority security conditions detected.",
+
+        ELEVATED:
+            "Security activity requires analyst attention.",
+
+        NORMAL:
+            "No elevated security conditions detected."
+    };
+
+    setText(
+        "posture-description",
+        descriptions[data.posture] ||
+        "Security posture unavailable."
+    );
+
+    const metrics =
+        data.metrics || {};
+
+    setText(
+        "metric-assets",
+        metrics.assets ?? 0
+    );
+
+    setText(
+        "metric-events",
+        metrics.security_events ?? 0
+    );
+
+    setText(
+        "metric-detections",
+        metrics.detections ?? 0
+    );
+
+    setText(
+        "metric-incidents",
+        metrics.incidents ?? 0
+    );
+
+    setText(
+        "metric-iocs",
+        metrics.iocs ?? 0
+    );
+
+    setText(
+        "metric-risk",
+        metrics.graph_max_risk ?? 0
+    );
+
+    setText(
+        "risk-label",
+        metrics.graph_max_risk >= 85
+            ? "CRITICAL GRAPH RISK"
+            : "Risk propagation"
+    );
+
+    renderIncidents(
+        data.recent_incidents || []
+    );
+
+    renderSeverity(
+        data.severity_distribution || {}
+    );
+
+    renderDetectionDistribution(
+        data.detection_distribution || []
+    );
+}
+
+
+function renderIncidents(incidents) {
+
+    setText(
+        "incident-count",
+        incidents.length
+    );
+
+    const container =
+        document.getElementById(
+            "incident-list"
+        );
+
+    if (!incidents.length) {
+
+        container.innerHTML =
+            '<div class="empty-state">No recent incidents.</div>';
+
+        return;
+    }
+
+    container.innerHTML =
+        incidents.map(
+            incident => {
+
+                const severity =
+                    String(
+                        incident.severity ||
+                        "INFO"
+                    ).toUpperCase();
+
+                const incidentId =
+                    Number(incident.id);
+
+                return `
+                    <div
+                        class="incident-row clickable-row"
+                        data-entity-id="incident:${escapeHtml(incident.id)}"
+                        onclick="openInvestigation(
+                            'incident:${escapeHtml(incident.id)}'
+                        )"
+                    >
+
+                        <div
+                            class="incident-indicator ${severityClass(severity)}"
+                        ></div>
+
+                        <div class="incident-main">
+
+                            <strong>
+                                ${escapeHtml(
+                                    incident.title
+                                )}
+                            </strong>
+
+                            <span>
+                                ${escapeHtml(
+                                    incident.source_ip ||
+                                    "No source IP"
+                                )}
+                            </span>
+
+                        </div>
+
+                        <div class="incident-meta">
+
+                            <span
+                                class="severity-pill ${severityClass(severity)}"
+                            >
+                                ${escapeHtml(severity)}
+                            </span>
+
+                            <strong>
+                                ${escapeHtml(
+                                    incident.risk_score ?? 0
+                                )}
+                            </strong>
+
+                            <small>
+                                ${formatTimestamp(
+                                    incident.updated_at ||
+                                    incident.created_at
+                                )}
+                            </small>
+
+                            <div
+                                class="incident-report-actions"
+                                onclick="event.stopPropagation()"
+                            >
+
+                                <button
+                                    type="button"
+                                    class="report-action-btn"
+                                    title="View HTML security report"
+                                    onclick="window.open(
+                                        '/api/reports/incident/' +
+                                        incidentId +
+                                        '/html',
+                                        '_blank',
+                                        'noopener,noreferrer'
+                                    )"
+                                >
+                                    HTML
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="report-action-btn"
+                                    title="Download PDF security report"
+                                    onclick="window.open(
+                                        '/api/reports/incident/' +
+                                        incidentId +
+                                        '/pdf',
+                                        '_blank',
+                                        'noopener,noreferrer'
+                                    )"
+                                >
+                                    PDF
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="report-action-btn"
+                                    title="View JSON security report"
+                                    onclick="window.open(
+                                        '/api/reports/incident/' +
+                                        incidentId,
+                                        '_blank',
+                                        'noopener,noreferrer'
+                                    )"
+                                >
+                                    JSON
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                `;
+            }
+        ).join("");
+}
+
+function renderSeverity(distribution) {
+
+    const container =
+        document.getElementById(
+            "severity-bars"
+        );
+
+    const order = [
+        "CRITICAL",
+        "HIGH",
+        "MEDIUM",
+        "LOW"
+    ];
+
+    const total =
+        order.reduce(
+            (sum, key) =>
+                sum +
+                Number(
+                    distribution[key] || 0
+                ),
+            0
+        );
+
+    if (!total) {
+
+        container.innerHTML =
+            '<div class="empty-state">No severity data.</div>';
+
+        return;
+    }
+
+    container.innerHTML =
+        order.map(
+            severity => {
+
+                const count =
+                    Number(
+                        distribution[severity] || 0
+                    );
+
+                const percentage =
+                    Math.round(
+                        (count / total) * 100
+                    );
+
+                return `
+                    <div class="severity-row">
+
+                        <div class="severity-label">
+
+                            <span
+                                class="severity-name ${severityClass(severity)}"
+                            >
+                                ${severity}
+                            </span>
+
+                            <strong>
+                                ${count}
+                            </strong>
+
+                        </div>
+
+                        <div class="severity-track">
+
+                            <div
+                                class="severity-fill ${severityClass(severity)}"
+                                style="width:${percentage}%"
+                            ></div>
+
+                        </div>
+
+                        <span class="severity-percent">
+                            ${percentage}%
+                        </span>
+
+                    </div>
+                `;
+            }
+        ).join("");
+}
+
+
+function renderDetectionDistribution(items) {
+
+    const container =
+        document.getElementById(
+            "detection-types"
+        );
+
+    if (!items.length) {
+
+        container.innerHTML =
+            '<div class="empty-state">No detections.</div>';
+
+        return;
+    }
+
+    container.innerHTML =
+        items.map(
+            item => `
+                <div class="detection-type-row">
+
+                    <span>
+                        ${escapeHtml(item.name)}
+                    </span>
+
+                    <strong>
+                        ${escapeHtml(item.count)}
+                    </strong>
+
+                </div>
+            `
+        ).join("");
+}
+
+
+/* =========================================================
+   LIVE ALERTS
+   ========================================================= */
+
+async function loadAlerts() {
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/soc/alerts?limit=25",
+                {
+                    cache: "no-store"
+                }
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                `Alerts HTTP ${response.status}`
+            );
+        }
+
+        const data =
+            await response.json();
+
+        state.alerts = data;
+
+        renderAlerts(data);
+
+        setText(
+            "stream-status",
+            "STREAM ACTIVE"
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Alert stream error:",
+            error
+        );
+
+        setText(
+            "stream-status",
+            "STREAM ERROR"
+        );
+    }
+}
+
+
+function renderAlerts(data) {
+
+    const counts =
+        data.severity_counts || {};
+
+    setText(
+        "critical-count",
+        counts.CRITICAL || 0
+    );
+
+    setText(
+        "high-count",
+        counts.HIGH || 0
+    );
+
+    setText(
+        "medium-count",
+        counts.MEDIUM || 0
+    );
+
+    setText(
+        "low-count",
+        counts.LOW || 0
+    );
+
+    setText(
+        "info-count",
+        counts.INFO || 0
+    );
+
+    const container =
+        document.getElementById(
+            "alert-stream"
+        );
+
+    const alerts =
+        data.alerts || [];
+
+    if (!container) {
+        return;
+    }
+
+    if (!alerts.length) {
+
+        container.innerHTML =
+            '<div class="empty-state">No live alerts.</div>';
+
+        return;
+    }
+
+    container.innerHTML =
+        alerts.map(
+            alert => {
+
+                const severity =
+                    String(
+                        alert.severity ||
+                        "INFO"
+                    ).toUpperCase();
+
+                const entityId =
+                    String(
+                        alert.entity_id ||
+                        alert.alert_id ||
+                        ""
+                    );
+
+                const title =
+                    alert.title ||
+                    alert.name ||
+                    "Security Alert";
+
+                const sourceIp =
+                    alert.source_ip ||
+                    "No source IP";
+
+                const alertType =
+                    alert.type ||
+                    alert.entity_type ||
+                    "ALERT";
+
+                const confidence =
+                    Number(
+                        alert.confidence || 0
+                    );
+
+                const timestamp =
+                    alert.created_at ||
+                    alert.updated_at ||
+                    alert.timestamp ||
+                    null;
+
+                return `
+                    <button
+                        type="button"
+                        class="alert-row alert-investigation-button"
+                        data-entity-id="${escapeHtml(entityId)}"
+                        onclick="window.openInvestigation(this.dataset.entityId)"
+                        data-alert-id="${escapeHtml(entityId)}"
+                        title="Open investigation"
+                    >
+
+                        <div
+                            class="alert-severity ${severityClass(severity)}"
+                        >
+                            ${escapeHtml(severity)}
+                        </div>
+
+                        <div class="alert-content">
+
+                            <strong>
+                                ${escapeHtml(title)}
+                            </strong>
+
+                            <span>
+                                ${escapeHtml(sourceIp)}
+                            </span>
+
+                        </div>
+
+                        <div class="alert-type">
+                            ${escapeHtml(alertType)}
+                        </div>
+
+                        <div class="alert-confidence">
+                            ${Math.round(
+                                confidence * 100
+                            )}%
+                        </div>
+
+                        <div class="alert-time">
+                            ${formatTimestamp(timestamp)}
+                        </div>
+
+                    </button>
+                `;
+            }
+        ).join("");
+}
+
+
+/* =========================================================
+   ENTITY GRAPH
+   ========================================================= */
+
+async function loadGraph() {
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/soc/graph",
+                {
+                    cache: "no-store"
+                }
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                `Graph HTTP ${response.status}`
+            );
+        }
+
+        const data =
+            await response.json();
+
+        state.graph = data;
+
+        renderGraph(data);
+
+    } catch (error) {
+
+        console.error(
+            "Graph error:",
+            error
+        );
+
+        document.getElementById(
+            "entity-graph"
+        ).innerHTML =
+            '<div class="graph-loading">Unable to load entity graph.</div>';
+    }
+}
+
+
+function renderGraph(data) {
+
+    const summary =
+        data.summary || {};
+
+    setText(
+        "graph-entities",
+        summary.entities ?? 0
+    );
+
+    setText(
+        "graph-relationships",
+        summary.relationships ?? 0
+    );
+
+    setText(
+        "graph-high-risk",
+        summary.high_risk ?? 0
+    );
+
+    setText(
+        "graph-risk-badge",
+        `RISK ${summary.max_risk ?? 0}`
+    );
+
+    const entities =
+        data.entities || [];
+
+    const relationships =
+        data.relationships || [];
+
+    renderEntityGraph(
+        entities,
+        relationships,
+        data.risk_by_entity || {}
+    );
+
+    renderRelationships(
+        relationships,
+        entities
+    );
+}
+
+
+function renderEntityGraph(
+    entities,
+    relationships,
+    riskByEntity
+) {
+
+    const container =
+        document.getElementById(
+            "entity-graph"
+        );
+
+    if (!entities.length) {
+
+        container.innerHTML =
+            '<div class="graph-loading">No graph entities available.</div>';
+
+        return;
+    }
+
+    const width = 1000;
+    const height = 430;
+
+    const positions = {};
+    const groups = {};
+
+    entities.forEach(
+        entity => {
+
+            const type =
+                String(
+                    entity.type ||
+                    "UNKNOWN"
+                ).toUpperCase();
+
+            if (!groups[type]) {
+                groups[type] = [];
+            }
+
+            groups[type].push(entity);
+        }
+    );
+
+    const typeOrder = [
+        "IP",
+        "IOC",
+        "DETECTION",
+        "INCIDENT",
+        "ASSET",
+        "DOMAIN",
+        "PROCESS",
+        "MITRE_TECHNIQUE"
+    ];
+
+    const activeTypes =
+        typeOrder.filter(
+            type =>
+                groups[type] &&
+                groups[type].length
+        );
+
+    activeTypes.forEach(
+        (type, typeIndex) => {
+
+            const items =
+                groups[type];
+
+            const x =
+                90 +
+                (
+                    typeIndex /
+                    Math.max(
+                        1,
+                        activeTypes.length - 1
+                    )
+                ) *
+                (width - 180);
+
+            items.forEach(
+                (entity, itemIndex) => {
+
+                    const spacing =
+                        height /
+                        (items.length + 1);
+
+                    positions[
+                        String(entity.id)
+                    ] = {
+                        x,
+                        y:
+                            spacing *
+                            (itemIndex + 1)
+                    };
+                }
+            );
+        }
+    );
+
+    let svg =
+        `<svg
+            class="graph-svg"
+            viewBox="0 0 ${width} ${height}"
+            preserveAspectRatio="none"
+        >`;
+
+    svg += `
+        <defs>
+
+            <marker
+                id="arrow"
+                markerWidth="8"
+                markerHeight="8"
+                refX="7"
+                refY="3"
+                orient="auto"
+            >
+                <path
+                    d="M0,0 L0,6 L7,3 z"
+                    class="graph-arrow"
+                />
+            </marker>
+
+        </defs>
+    `;
+
+    relationships.forEach(
+        relationship => {
+
+            const source =
+                positions[
+                    String(
+                        relationship.source
+                    )
+                ];
+
+            const target =
+                positions[
+                    String(
+                        relationship.target
+                    )
+                ];
+
+            if (!source || !target) {
+                return;
+            }
+
+            svg += `
+                <line
+                    x1="${source.x}"
+                    y1="${source.y}"
+                    x2="${target.x}"
+                    y2="${target.y}"
+                    class="graph-edge"
+                    marker-end="url(#arrow)"
+                />
+
+                <text
+                    x="${(
+                        source.x +
+                        target.x
+                    ) / 2}"
+                    y="${(
+                        source.y +
+                        target.y
+                    ) / 2 - 7}"
+                    class="graph-edge-label"
+                >
+                    ${escapeHtml(
+                        relationship.type
+                    )}
+                </text>
+            `;
+        }
+    );
+
+    entities.forEach(
+        entity => {
+
+            const position =
+                positions[
+                    String(entity.id)
+                ];
+
+            if (!position) {
+                return;
+            }
+
+            const type =
+                String(
+                    entity.type ||
+                    "UNKNOWN"
+                ).toUpperCase();
+
+            const risk =
+                Number(
+                    riskByEntity[
+                        String(entity.id)
+                    ] || 0
+                );
+
+            const riskClass =
+                risk >= 85
+                    ? "risk-critical"
+                    : risk >= 70
+                        ? "risk-high"
+                        : risk >= 40
+                            ? "risk-medium"
+                            : "";
+
+            const label =
+                entity.label ||
+                entity.id;
+
+            svg += `
+                <g
+                    class="graph-node ${entityClass(type)} ${riskClass}"
+                    transform="translate(
+                        ${position.x},
+                        ${position.y}
+                    )"
+                    onclick="openInvestigation(
+                        '${escapeHtml(entity.id)}'
+                    )"
+                    tabindex="0"
+                >
+
+                    <circle
+                        r="27"
+                        class="node-circle"
+                    />
+
+                    <text
+                        y="-3"
+                        class="node-type"
+                    >
+                        ${escapeHtml(
+                            type === "MITRE_TECHNIQUE"
+                                ? "MITRE"
+                                : type
+                        )}
+                    </text>
+
+                    <text
+                        y="44"
+                        class="node-label"
+                    >
+                        ${escapeHtml(
+                            String(label).slice(
+                                0,
+                                24
+                            )
+                        )}
+                    </text>
+
+                    ${
+                        risk > 0
+                            ? `
+                                <text
+                                    y="59"
+                                    class="node-risk"
+                                >
+                                    RISK ${risk}
+                                </text>
+                              `
+                            : ""
+                    }
+
+                </g>
+            `;
+        }
+    );
+
+    svg += "</svg>";
+
+    container.innerHTML = svg;
+}
+
+
+/* =========================================================
+   GRAPH RELATIONSHIPS
+   ========================================================= */
+
+function renderRelationships(
+    relationships,
+    entities
+) {
+
+    const container =
+        document.getElementById(
+            "relationship-list"
+        );
+
+    if (!relationships.length) {
+
+        container.innerHTML =
+            '<div class="empty-state">No relationships.</div>';
+
+        return;
+    }
+
+    const entityMap = {};
+
+    entities.forEach(
+        entity => {
+
+            entityMap[
+                String(entity.id)
+            ] = entity;
+
+        }
+    );
+
+    container.innerHTML =
+        relationships.map(
+            relationship => {
+
+                const source =
+                    entityMap[
+                        String(
+                            relationship.source
+                        )
+                    ];
+
+                const target =
+                    entityMap[
+                        String(
+                            relationship.target
+                        )
+                    ];
+
+                return `
+                    <div class="relationship-row">
+
+                        <div class="relationship-node">
+
+                            <span class="relationship-type">
+                                ${escapeHtml(
+                                    source?.type ||
+                                    "ENTITY"
+                                )}
+                            </span>
+
+                            <strong>
+                                ${escapeHtml(
+                                    source?.label ||
+                                    relationship.source
+                                )}
+                            </strong>
+
+                        </div>
+
+                        <div class="relationship-arrow">
+                            →
+                        </div>
+
+                        <div class="relationship-action">
+                            ${escapeHtml(
+                                relationship.type
+                            )}
+                        </div>
+
+                        <div class="relationship-arrow">
+                            →
+                        </div>
+
+                        <div class="relationship-node">
+
+                            <span class="relationship-type">
+                                ${escapeHtml(
+                                    target?.type ||
+                                    "ENTITY"
+                                )}
+                            </span>
+
+                            <strong>
+                                ${escapeHtml(
+                                    target?.label ||
+                                    relationship.target
+                                )}
+                            </strong>
+
+                        </div>
+
+                        <div class="relationship-confidence">
+                            ${Math.round(
+                                Number(
+                                    relationship.confidence ??
+                                    1
+                                ) * 100
+                            )}%
+                        </div>
+
+                    </div>
+                `;
+            }
+        ).join("");
+}
+
+
+/* =========================================================
+   INVESTIGATION
+   ========================================================= */
+
+window.openInvestigation = async function openInvestigation(
+    entityId
+) {
+
+    const panel =
+        document.getElementById(
+            "investigation-panel"
+        );
+
+    const content =
+        document.getElementById(
+            "investigation-content"
+        );
+
+    const loading =
+        document.getElementById(
+            "investigation-loading"
+        );
+
+    panel.classList.remove(
+        "hidden"
+    );
+
+    content.classList.add(
+        "hidden"
+    );
+
+    loading.classList.remove(
+        "hidden"
+    );
+
+    panel.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+    });
+
+    try {
+
+        const response =
+            await fetch(
+                `/api/soc/investigation/${encodeURIComponent(entityId)}`,
+                {
+                    cache: "no-store"
+                }
+            );
+
+        if (!response.ok) {
+
+            throw new Error(
+                `Investigation HTTP ${response.status}`
+            );
+        }
+
+        const data =
+            await response.json();
+
+        state.investigation = data;
+
+        renderInvestigation(data);
+
+        await window.loadInvestigationActions(
+            entityId
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Investigation error:",
+            error
+        );
+
+        content.innerHTML = `
+            <div class="empty-state">
+                Investigation context unavailable.
+            </div>
+        `;
+
+        content.classList.remove(
+            "hidden"
+        );
+
+    } finally {
+
+        loading.classList.add(
+            "hidden"
+        );
+    }
+}
+
+
+function renderInvestigation(data) {
+
+    const entity =
+        data.entity || {};
+
+    const investigation =
+        data.investigation || {};
+
+    const risk =
+        data.risk || {};
+
+    setText(
+        "investigation-label",
+        entity.label || "UNKNOWN"
+    );
+
+    setText(
+        "investigation-id",
+        entity.id || "—"
+    );
+
+    setText(
+        "related-count",
+        investigation.related_entity_count ?? 0
+    );
+
+    setText(
+        "relationship-count",
+        investigation.relationship_count ?? 0
+    );
+
+    setText(
+        "global-risk",
+        risk.global_max_risk ?? 0
+    );
+
+    setText(
+        "investigation-risk-value",
+        entity.risk ?? 0
+    );
+
+    setText(
+        "investigation-priority",
+        investigation.high_priority
+            ? "HIGH PRIORITY"
+            : "NORMAL"
+    );
+
+    /* =====================================================
+       PHASE 7.1 — INVESTIGATION WORKSPACE OVERVIEW
+       ===================================================== */
+
+    const incidentProperties =
+        entity.properties || {};
+
+    setText(
+        "workspace-incident-key",
+        incidentProperties.incident_key || "—"
+    );
+
+    setText(
+        "workspace-status",
+        incidentProperties.status || "—"
+    );
+
+    setText(
+        "workspace-severity",
+        incidentProperties.severity || "—"
+    );
+
+    setText(
+        "workspace-risk",
+        `${incidentProperties.risk_score ?? entity.risk ?? 0} / 100`
+    );
+
+    setText(
+        "workspace-source-ip",
+        incidentProperties.source_ip || "—"
+    );
+
+    setText(
+        "workspace-target-asset",
+        incidentProperties.target_asset || "—"
+    );
+
+    setText(
+        "workspace-detection-count",
+        investigation.detection_count ?? 0
+    );
+
+    setText(
+        "workspace-mitre-count",
+        investigation.mitre_count ?? 0
+    );
+
+    setText(
+        "workspace-ioc-count",
+        investigation.ioc_count ?? 0
+    );
+
+    setText(
+        "workspace-timeline-count",
+        investigation.timeline_count ??
+        (data.timeline || []).length
+    );
+
+    setText(
+        "workspace-attack-story",
+        incidentProperties.attack_story ||
+        "No attack story available."
+    );
+
+    setText(
+        "workspace-recommended-action",
+        `ACTION ${investigation.recommended_action || "—"}`
+    );
+
+    setText(
+        "timeline-count",
+        investigation.timeline_count ??
+        (data.timeline || []).length
+    );
+
+    setText(
+        "timeline-header-count",
+        `${investigation.timeline_count ?? (data.timeline || []).length} EVENTS`
+    );
+
+
+    /* =====================================================
+       PHASE 7.4 — ENTITY PIVOT & RELATIONSHIP NAVIGATION
+       ===================================================== */
+
+    const relatedContainer =
+        document.getElementById(
+            "related-entities"
+        );
+
+    const related =
+        data.related_entities || [];
+
+    if (!related.length) {
+
+        relatedContainer.innerHTML =
+            '<div class="empty-state">No related entities.</div>';
+
+    } else {
+
+        relatedContainer.innerHTML =
+            related.map(
+                item => {
+
+                    const entityId =
+                        String(
+                            item.id ||
+                            ""
+                        );
+
+                    const entityType =
+                        String(
+                            item.type ||
+                            "ENTITY"
+                        ).toUpperCase();
+
+                    const entityLabel =
+                        String(
+                            item.label ||
+                            entityId ||
+                            "UNKNOWN"
+                        );
+
+                    return `
+                        <div
+                            class="related-entity entity-pivot-card"
+                            data-pivot-entity="${escapeHtml(
+                                entityId
+                            )}"
+                            role="button"
+                            tabindex="0"
+                            title="Pivot to ${escapeHtml(
+                                entityId
+                            )}"
+                        >
+
+                            <div>
+
+                                <span>
+                                    ${escapeHtml(
+                                        entityType
+                                    )}
+                                </span>
+
+                                <strong>
+                                    ${escapeHtml(
+                                        entityLabel
+                                    )}
+                                </strong>
+
+                                <code>
+                                    ${escapeHtml(
+                                        entityId
+                                    )}
+                                </code>
+
+                            </div>
+
+                            <b class="entity-pivot-arrow">
+                                PIVOT →
+                            </b>
+
+                        </div>
+                    `;
+                }
+            ).join("");
+    }
+
+
+    /* =====================================================
+       RELATIONSHIPS
+       ===================================================== */
+
+    const relationshipContainer =
+        document.getElementById(
+            "investigation-relationships"
+        );
+
+    const relationships =
+        data.relationships || [];
+
+    if (!relationships.length) {
+
+        relationshipContainer.innerHTML =
+            '<div class="empty-state">No relationships.</div>';
+
+    } else {
+
+        relationshipContainer.innerHTML =
+            relationships.map(
+                relationship => {
+
+                    const source =
+                        String(
+                            relationship.source ||
+                            ""
+                        );
+
+                    const target =
+                        String(
+                            relationship.target ||
+                            ""
+                        );
+
+                    const relationshipType =
+                        String(
+                            relationship.type ||
+                            "RELATED_TO"
+                        ).toUpperCase();
+
+                    const confidenceValue =
+                        Number(
+                            relationship.confidence ||
+                            0
+                        );
+
+                    const confidence =
+                        Math.round(
+                            confidenceValue * 100
+                        );
+
+                    return `
+                        <div
+                            class="investigation-relationship relationship-pivot-card"
+                        >
+
+                            <div class="relationship-endpoint-row">
+
+                                <div class="relationship-endpoint">
+
+                                    <span class="relationship-endpoint-label">
+                                        SOURCE
+                                    </span>
+
+                                    <button
+                                        type="button"
+                                        class="relationship-entity-button"
+                                        data-pivot-entity="${escapeHtml(
+                                            source
+                                        )}"
+                                    >
+                                        ${escapeHtml(
+                                            source
+                                        )}
+                                    </button>
+
+                                </div>
+
+
+                                <div class="relationship-type-block">
+
+                                    <span class="relationship-type">
+                                        ${escapeHtml(
+                                            relationshipType
+                                        )}
+                                    </span>
+
+                                    <span class="relationship-arrow">
+                                        →
+                                    </span>
+
+                                </div>
+
+
+                                <div class="relationship-endpoint">
+
+                                    <span class="relationship-endpoint-label">
+                                        TARGET
+                                    </span>
+
+                                    <button
+                                        type="button"
+                                        class="relationship-entity-button"
+                                        data-pivot-entity="${escapeHtml(
+                                            target
+                                        )}"
+                                    >
+                                        ${escapeHtml(
+                                            target
+                                        )}
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+
+                            <div class="relationship-confidence">
+
+                                <span>
+                                    CONFIDENCE
+                                </span>
+
+                                <strong>
+                                    ${confidence}%
+                                </strong>
+
+                            </div>
+
+                        </div>
+                    `;
+                }
+            ).join("");
+    }
+
+
+    /*
+     * Attach investigation pivot behavior after rendering.
+     *
+     * This intentionally uses the existing investigation
+     * workflow rather than introducing another navigation path.
+     */
+
+    document
+        .querySelectorAll(
+            "[data-pivot-entity]"
+        )
+        .forEach(
+            element => {
+
+                const entityId =
+                    element.dataset.pivotEntity;
+
+                if (!entityId) {
+                    return;
+                }
+
+                element.addEventListener(
+                    "click",
+                    event => {
+
+                        event.stopPropagation();
+
+                        window.pivotInvestigationEntity(
+                            entityId
+                        );
+                    }
+                );
+
+                element.addEventListener(
+                    "keydown",
+                    event => {
+
+                        if (
+                            event.key ===
+                            "Enter" ||
+                            event.key ===
+                            " "
+                        ) {
+
+                            event.preventDefault();
+
+                            window.pivotInvestigationEntity(
+                                entityId
+                            );
+                        }
+                    }
+                );
+            }
+        );
+
+
+    window.pivotInvestigationEntity =
+        async function pivotInvestigationEntity(
+            entityId
+        ) {
+
+            if (!entityId) {
+                return;
+            }
+
+            try {
+
+                await openInvestigation(
+                    entityId
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Entity investigation pivot failed:",
+                    error
+                );
+
+            }
+        };
+
+
+    /* =====================================================
+       PHASE 6.9.2 — TIMELINE
+       ===================================================== */
+
+    renderInvestigationTimeline(
+        data.timeline || []
+    );
+
+
+    /* =====================================================
+       ADVANCED INVESTIGATION
+       ===================================================== */
+
+    renderAdvancedInvestigation(data);
+
+    renderInvestigationWorkflow(data);
+
+    // PHASE 7.9 — INVESTIGATION INTELLIGENCE
+    loadInvestigationIntelligence(
+        data?.entity?.id
+    );
+
+    document
+        .getElementById(
+            "investigation-content"
+        )
+        .classList.remove(
+            "hidden"
+        );
+}
+
+
+
+/* =========================================================
+   PHASE 7.6 — ANALYST INVESTIGATION CONTEXT
+   ========================================================= */
+
+function renderInvestigationContextExtras(data, actions) {
+
+    const workspace =
+        document.getElementById(
+            "advanced-investigation"
+        );
+
+    if (!workspace) {
+        return;
+    }
+
+    const entity =
+        data.entity || {};
+
+    const properties =
+        entity.properties || {};
+
+    const investigation =
+        data.investigation || {};
+
+    const actionList =
+        Array.isArray(actions)
+            ? actions
+            : [];
+
+    const notes =
+        actionList.filter(
+            action =>
+                action.action_type === "ADD_NOTE" &&
+                action.reason
+        );
+
+    const lastAction =
+        actionList.length
+            ? actionList[0]
+            : null;
+
+    const lastActivity =
+        lastAction &&
+        lastAction.created_at
+            ? new Date(
+                lastAction.created_at
+            ).toLocaleString()
+            : "Not available";
+
+    const wrapper =
+        document.createElement(
+            "div"
+        );
+
+    wrapper.id =
+        "phase76-context-wrapper";
+
+    wrapper.innerHTML = `
+
+        <div class="investigation-box phase76-context-box">
+
+            <div class="investigation-box-title">
+                ANALYST INVESTIGATION CONTEXT
+            </div>
+
+            <div class="investigation-box-subtitle">
+                Persistent analyst context and investigation notes
+            </div>
+
+            <div class="phase76-context-grid">
+
+                <div class="phase76-context-card">
+                    <div class="phase76-context-label">
+                        ANALYST
+                    </div>
+
+                    <div class="phase76-context-value">
+                        SOC_ANALYST
+                    </div>
+                </div>
+
+                <div class="phase76-context-card">
+                    <div class="phase76-context-label">
+                        ACTIONS RECORDED
+                    </div>
+
+                    <div class="phase76-context-value">
+                        ${actionList.length}
+                    </div>
+                </div>
+
+                <div class="phase76-context-card">
+                    <div class="phase76-context-label">
+                        LAST ACTIVITY
+                    </div>
+
+                    <div class="phase76-context-value">
+                        ${escapeHtml(lastActivity)}
+                    </div>
+                </div>
+
+                <div class="phase76-context-card">
+                    <div class="phase76-context-label">
+                        INCIDENT STATUS
+                    </div>
+
+                    <div class="phase76-context-value">
+                        ${escapeHtml(
+                            properties.status ||
+                            "UNKNOWN"
+                        )}
+                    </div>
+                </div>
+
+                <div class="phase76-context-card">
+                    <div class="phase76-context-label">
+                        INCIDENT KEY
+                    </div>
+
+                    <div class="phase76-context-value">
+                        ${escapeHtml(
+                            properties.incident_key ||
+                            "—"
+                        )}
+                    </div>
+                </div>
+
+                <div class="phase76-context-card">
+                    <div class="phase76-context-label">
+                        INVESTIGATION STATE
+                    </div>
+
+                    <div class="phase76-context-value">
+                        ${
+                            investigation.high_priority
+                                ? "HIGH PRIORITY"
+                                : "STANDARD"
+                        }
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="phase76-notes">
+
+                <div class="investigation-box-title">
+                    ANALYST NOTES
+                </div>
+
+                ${
+                    notes.length
+                        ? notes.map(
+                            note => `
+
+                            <div class="phase76-note">
+
+                                <div class="phase76-note-header">
+
+                                    <span class="phase76-note-action">
+                                        ANALYST NOTE
+                                    </span>
+
+                                    <span class="phase76-note-time">
+                                        ${
+                                            note.created_at
+                                                ? new Date(
+                                                    note.created_at
+                                                ).toLocaleString()
+                                                : "Unknown time"
+                                        }
+                                    </span>
+
+                                </div>
+
+                                <div class="phase76-note-body">
+                                    ${escapeHtml(
+                                        note.reason
+                                    )}
+                                </div>
+
+                            </div>
+
+                        `
+                        ).join("")
+                        : `
+                            <div class="empty-state">
+                                No analyst notes recorded for this investigation.
+                            </div>
+                        `
+                }
+
+            </div>
+
+        </div>
+    `;
+
+    const existing =
+        document.getElementById(
+            "phase76-context-wrapper"
+        );
+
+    if (existing) {
+        existing.remove();
+    }
+
+    workspace.appendChild(
+        wrapper
+    );
+}
+
+
+/* =========================================================
+   PHASE 6.9.2 — TIMELINE RENDERER
+   ========================================================= */
+
+function renderInvestigationTimeline(events) {
+
+    const container =
+        document.getElementById(
+            "timeline-events"
+        );
+
+    const count =
+        events.length;
+
+    setText(
+        "timeline-count",
+        count
+    );
+
+    setText(
+        "timeline-header-count",
+        `${count} EVENTS`
+    );
+
+    if (!container) {
+        return;
+    }
+
+    if (!count) {
+
+        container.innerHTML = `
+            <div class="timeline-empty">
+                No timeline events available for this investigation.
+            </div>
+        `;
+
+        return;
+    }
+
+    /*
+     * PHASE 7.3
+     * Investigation Timeline & Event Pivoting
+     *
+     * Timeline remains derived entirely from the
+     * investigation API response. No synthetic events
+     * are created in the frontend.
+     */
+
+    const sortedEvents =
+        [...events].sort(
+            (a, b) =>
+                String(a.timestamp || "")
+                    .localeCompare(
+                        String(b.timestamp || "")
+                    )
+        );
+
+    const eventTypes = [
+        ...new Set(
+            sortedEvents.map(
+                event =>
+                    String(
+                        event.event_type ||
+                        "EVENT"
+                    ).toUpperCase()
+            )
+        ),
+    ];
+
+    const filterOptions =
+        eventTypes
+            .map(
+                type => `
+                    <option value="${escapeHtml(type)}">
+                        ${escapeHtml(type)}
+                    </option>
+                `
+            )
+            .join("");
+
+    const filterBar = `
+        <div class="timeline-controls">
+
+            <div class="timeline-control-group">
+
+                <label for="timeline-event-filter">
+                    EVENT TYPE
+                </label>
+
+                <select
+                    id="timeline-event-filter"
+                    class="timeline-filter-select"
+                    onchange="window.filterInvestigationTimeline(this.value)"
+                >
+                    <option value="ALL">
+                        ALL EVENTS
+                    </option>
+
+                    ${filterOptions}
+                </select>
+
+            </div>
+
+            <div class="timeline-control-summary">
+                <span>
+                    CHRONOLOGICAL EVENT STREAM
+                </span>
+
+                <strong id="timeline-visible-count">
+                    ${count}
+                </strong>
+            </div>
+
+        </div>
+    `;
+
+    const renderEvent = (event, index) => {
+
+        const eventType =
+            String(
+                event.event_type ||
+                "EVENT"
+            ).toUpperCase();
+
+        const eventClass =
+            eventType === "DETECTION"
+                ? "timeline-detection"
+                : eventType === "INCIDENT_CREATED"
+                    ? "timeline-incident"
+                    : eventType === "INCIDENT_UPDATED"
+                        ? "timeline-update"
+                        : "";
+
+        const markerClass =
+            eventType.toLowerCase();
+
+        const severity =
+            event.severity
+                ? String(
+                    event.severity
+                ).toUpperCase()
+                : "";
+
+        const confidence =
+            event.confidence !== undefined &&
+            event.confidence !== null
+                ? `${Math.round(
+                    Number(
+                        event.confidence || 0
+                    ) * 100
+                )}%`
+                : null;
+
+        const entityId =
+            event.entity_id ||
+            "";
+
+        const hasPivot =
+            Boolean(entityId);
+
+        return `
+            <div
+                class="
+                    timeline-event
+                    ${eventClass}
+                "
+                data-timeline-event-type="${escapeHtml(
+                    eventType
+                )}"
+            >
+
+                <div
+                    class="
+                        timeline-marker
+                        ${markerClass}
+                    "
+                ></div>
+
+
+                <div class="timeline-top">
+
+                    <span class="timeline-sequence">
+                        EVENT ${escapeHtml(
+                            event.sequence ??
+                            index + 1
+                        )}
+                    </span>
+
+                    <span class="timeline-time">
+                        ${escapeHtml(
+                            formatDateTime(
+                                event.timestamp
+                            )
+                        )}
+                    </span>
+
+                </div>
+
+
+                <span class="timeline-event-type">
+                    ${escapeHtml(eventType)}
+                </span>
+
+
+                <strong class="timeline-event-title">
+                    ${escapeHtml(
+                        event.title ||
+                        "Security Event"
+                    )}
+                </strong>
+
+
+                <div class="timeline-event-description">
+                    ${escapeHtml(
+                        event.description ||
+                        "No event description available."
+                    )}
+                </div>
+
+
+                <div class="timeline-meta">
+
+                    ${
+                        entityId
+                            ? `
+                                <span>
+                                    ENTITY:
+                                    <strong>
+                                        ${escapeHtml(
+                                            entityId
+                                        )}
+                                    </strong>
+                                </span>
+                              `
+                            : ""
+                    }
+
+
+                    ${
+                        event.source_ip
+                            ? `
+                                <span>
+                                    SOURCE:
+                                    <strong>
+                                        ${escapeHtml(
+                                            event.source_ip
+                                        )}
+                                    </strong>
+                                </span>
+                              `
+                            : ""
+                    }
+
+
+                    ${
+                        severity
+                            ? `
+                                <span>
+                                    SEVERITY:
+                                    <strong>
+                                        ${escapeHtml(
+                                            severity
+                                        )}
+                                    </strong>
+                                </span>
+                              `
+                            : ""
+                    }
+
+
+                    ${
+                        event.risk_score !== undefined &&
+                        event.risk_score !== null
+                            ? `
+                                <span>
+                                    RISK:
+                                    <strong>
+                                        ${escapeHtml(
+                                            event.risk_score
+                                        )}
+                                    </strong>
+                                </span>
+                              `
+                            : ""
+                    }
+
+
+                    ${
+                        confidence
+                            ? `
+                                <span>
+                                    CONFIDENCE:
+                                    <strong>
+                                        ${escapeHtml(
+                                            confidence
+                                        )}
+                                    </strong>
+                                </span>
+                              `
+                            : ""
+                    }
+
+                </div>
+
+
+                ${
+                    hasPivot
+                        ? `
+                            <div class="timeline-pivot">
+
+                                <button
+                                    type="button"
+                                    class="timeline-pivot-button"
+                                    onclick="window.pivotInvestigationEvent('${escapeHtml(
+                                        entityId
+                                    )}')"
+                                >
+                                    PIVOT TO ENTITY
+                                </button>
+
+                                <code>
+                                    ${escapeHtml(entityId)}
+                                </code>
+
+                            </div>
+                          `
+                        : `
+                            <div class="timeline-no-pivot">
+                                No pivot entity available
+                            </div>
+                          `
+                }
+
+            </div>
+        `;
+    };
+
+    container.innerHTML =
+        filterBar +
+        `
+            <div
+                id="timeline-event-list"
+                class="timeline-event-list"
+            >
+                ${sortedEvents
+                    .map(renderEvent)
+                    .join("")}
+            </div>
+        `;
+
+    window.filterInvestigationTimeline =
+        function filterInvestigationTimeline(
+            filterType
+        ) {
+
+            const timelineItems =
+                document.querySelectorAll(
+                    "#timeline-event-list .timeline-event"
+                );
+
+            let visibleCount = 0;
+
+            timelineItems.forEach(
+                item => {
+
+                    const itemType =
+                        item.dataset
+                            .timelineEventType;
+
+                    const visible =
+                        filterType === "ALL" ||
+                        itemType === filterType;
+
+                    item.classList.toggle(
+                        "timeline-event-hidden",
+                        !visible
+                    );
+
+                    if (visible) {
+                        visibleCount += 1;
+                    }
+                }
+            );
+
+            setText(
+                "timeline-visible-count",
+                visibleCount
+            );
+        };
+
+
+    window.pivotInvestigationEvent =
+        async function pivotInvestigationEvent(
+            entityId
+        ) {
+
+            if (!entityId) {
+                return;
+            }
+
+            /*
+             * Pivot only into the existing investigation
+             * workflow. No new entity type is invented.
+             */
+
+            try {
+
+                await openInvestigation(
+                    entityId
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "Timeline entity pivot failed:",
+                    error
+                );
+
+            }
+        };
+}
+
+
+
+/* =========================================================
+   ADVANCED INVESTIGATION
+   ========================================================= */
+
+
+window.performInvestigationAction = async function performInvestigationAction(
+    actionType
+) {
+    const data = state.investigation || {};
+    const entityId =
+        data.entity_id ||
+        data.entity?.id ||
+        "";
+
+    if (!entityId.startsWith("incident:")) {
+        console.error(
+            "Investigation action requires an incident entity."
+        );
+        return;
+    }
+
+    const analystInput = document.getElementById(
+        "investigation-analyst"
+    );
+
+    const reasonInput = document.getElementById(
+        "investigation-action-reason"
+    );
+
+    const statusBox = document.getElementById(
+        "investigation-action-status"
+    );
+
+    const analyst =
+        analystInput?.value.trim() ||
+        "SOC_ANALYST";
+
+    const reason =
+        reasonInput?.value.trim() ||
+        null;
+
+    if (
+        actionType === "ADD_NOTE" &&
+        !reason
+    ) {
+        statusBox.textContent =
+            "ADD NOTE requires a reason or note.";
+        statusBox.classList.remove("hidden");
+        return;
+    }
+
+    statusBox.textContent =
+        `Recording ${actionType}...`;
+    statusBox.classList.remove("hidden");
+
+    const buttons = document.querySelectorAll(
+        ".investigation-action-button"
+    );
+
+    buttons.forEach((button) => {
+        button.disabled = true;
+    });
+
+    try {
+        const response = await fetch(
+            `/api/soc/investigation/${encodeURIComponent(entityId)}/actions`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    action_type: actionType,
+                    analyst: analyst,
+                    reason: reason,
+                }),
+                cache: "no-store",
+            }
+        );
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                result.detail
+                    ? JSON.stringify(result.detail)
+                    : `Action HTTP ${response.status}`
+            );
+        }
+
+        statusBox.textContent =
+            `${actionType} recorded successfully.`;
+
+        await window.loadInvestigationActions(
+            entityId
+        );
+
+        // Refresh the full investigation context so
+        // incident status/risk/timeline remain synchronized.
+        const investigationResponse = await fetch(
+            `/api/soc/investigation/${encodeURIComponent(entityId)}`,
+            {
+                cache: "no-store",
+            }
+        );
+
+        if (investigationResponse.ok) {
+            const investigationData =
+                await investigationResponse.json();
+
+            state.investigation =
+                investigationData;
+
+            renderInvestigation(
+                investigationData
+            );
+        }
+    } catch (error) {
+        console.error(
+            "Investigation action error:",
+            error
+        );
+
+        statusBox.textContent =
+            "Unable to record investigation action.";
+    } finally {
+        buttons.forEach((button) => {
+            button.disabled = false;
+        });
+    }
+};
+
+
+
+function renderInvestigationWorkflow(data) {
+
+    const stateBox =
+        document.getElementById(
+            "phase77-current-state"
+        );
+
+    const keyBox =
+        document.getElementById(
+            "phase77-incident-key"
+        );
+
+    if (!stateBox || !keyBox) {
+        return;
+    }
+
+    const entity =
+        data.entity || {};
+
+    const properties =
+        entity.properties || {};
+
+    const status =
+        String(
+            properties.status ||
+            "UNKNOWN"
+        ).toUpperCase();
+
+    const incidentKey =
+        properties.incident_key ||
+        "—";
+
+    stateBox.textContent =
+        status;
+
+    keyBox.textContent =
+        incidentKey;
+
+    document
+        .querySelectorAll(
+            ".phase77-status-button"
+        )
+        .forEach((button) => {
+
+            const action =
+                button.dataset.workflowAction;
+
+            const targetStatus =
+                action === "ACKNOWLEDGE"
+                    ? "ACKNOWLEDGED"
+                    : action === "INVESTIGATE"
+                        ? "INVESTIGATING"
+                        : action === "ESCALATE"
+                            ? "ESCALATED"
+                            : action === "CLOSE"
+                                ? "CLOSED"
+                                : "";
+
+            button.classList.toggle(
+                "phase77-status-active",
+                targetStatus === status
+            );
+
+            button.disabled =
+                targetStatus === status;
+        });
+}
+
+
+window.performInvestigationWorkflowAction =
+    async function performInvestigationWorkflowAction(
+        actionType
+    ) {
+
+        const data =
+            state.investigation || {};
+
+        const entityId =
+            data.entity_id ||
+            data.entity?.id ||
+            "";
+
+        if (!entityId.startsWith("incident:")) {
+            console.error(
+                "Workflow action requires an incident entity."
+            );
+            return;
+        }
+
+        const statusBox =
+            document.getElementById(
+                "phase77-workflow-status"
+            );
+
+        const analystInput =
+            document.getElementById(
+                "investigation-analyst"
+            );
+
+        const reasonInput =
+            document.getElementById(
+                "investigation-action-reason"
+            );
+
+        const analyst =
+            analystInput?.value.trim() ||
+            "SOC_ANALYST";
+
+        const reason =
+            reasonInput?.value.trim() ||
+            `Case workflow transition: ${actionType}`;
+
+        if (statusBox) {
+            statusBox.textContent =
+                `Updating case state to ${actionType}...`;
+
+            statusBox.classList.remove(
+                "hidden"
+            );
+        }
+
+        const buttons =
+            document.querySelectorAll(
+                ".phase77-status-button"
+            );
+
+        buttons.forEach((button) => {
+            button.disabled = true;
+        });
+
+        try {
+
+            const response =
+                await fetch(
+                    `/api/soc/investigation/${encodeURIComponent(entityId)}/actions`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+                        body: JSON.stringify({
+                            action_type:
+                                actionType,
+                            analyst:
+                                analyst,
+                            reason:
+                                reason
+                        }),
+                        cache: "no-store"
+                    }
+                );
+
+            const result =
+                await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.detail
+                        ? JSON.stringify(
+                            result.detail
+                        )
+                        : `Workflow HTTP ${response.status}`
+                );
+            }
+
+            if (statusBox) {
+                statusBox.textContent =
+                    `${actionType} workflow state recorded successfully.`;
+            }
+
+            await window.loadInvestigationActions(
+                entityId
+            );
+
+            const investigationResponse =
+                await fetch(
+                    `/api/soc/investigation/${encodeURIComponent(entityId)}`,
+                    {
+                        cache: "no-store"
+                    }
+                );
+
+            if (investigationResponse.ok) {
+
+                const investigationData =
+                    await investigationResponse.json();
+
+                state.investigation =
+                    investigationData;
+
+                renderInvestigation(
+                    investigationData
+                );
+
+                renderInvestigationWorkflow(
+                    investigationData
+                );
+            }
+
+        } catch (error) {
+
+            console.error(
+                "Investigation workflow error:",
+                error
+            );
+
+            if (statusBox) {
+                statusBox.textContent =
+                    "Unable to update case workflow state.";
+            }
+
+        } finally {
+
+            buttons.forEach((button) => {
+                button.disabled = false;
+            });
+
+            renderInvestigationWorkflow(
+                state.investigation || {}
+            );
+        }
+    };
+
+
+window.loadInvestigationActions = async function loadInvestigationActions(
+    entityId
+) {
+    const history = document.getElementById(
+        "investigation-action-history"
+    );
+
+    if (!history) {
+        return;
+    }
+
+    history.innerHTML = `
+        <div class="empty-state">
+            Loading action history...
+        </div>
+    `;
+
+    try {
+        const response = await fetch(
+            `/api/soc/investigation/${encodeURIComponent(entityId)}/actions`,
+            {
+                cache: "no-store",
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                `Action history HTTP ${response.status}`
+            );
+        }
+
+        const data = await response.json();
+
+        state.investigationActions =
+            data.actions || [];
+
+        renderInvestigationContextExtras(
+            state.investigation || {},
+            state.investigationActions
+        );
+
+        if (!data.actions || data.actions.length === 0) {
+            history.innerHTML = `
+                <div class="empty-state">
+                    No analyst actions recorded.
+                </div>
+            `;
+            return;
+        }
+
+        history.innerHTML = data.actions
+            .map((action) => {
+                const reason =
+                    action.reason ||
+                    "No reason provided.";
+
+                const timestamp =
+                    action.created_at
+                        ? new Date(
+                            action.created_at
+                        ).toLocaleString()
+                        : "Unknown time";
+
+                return `
+                    <div class="investigation-action-history-item">
+                        <div class="action-history-main">
+                            <strong>
+                                ${escapeHtml(
+                                    action.action_type
+                                )}
+                            </strong>
+
+                            <span class="action-history-status">
+                                ${escapeHtml(
+                                    action.status
+                                )}
+                            </span>
+                        </div>
+
+                        <div class="action-history-meta">
+                            ${escapeHtml(
+                                action.mode
+                            )}
+                            ·
+                            ${escapeHtml(
+                                timestamp
+                            )}
+                        </div>
+
+                        <div class="action-history-reason">
+                            ${escapeHtml(
+                                reason
+                            )}
+                        </div>
+                    </div>
+                `;
+            })
+            .join("");
+    } catch (error) {
+        console.error(
+            "Action history error:",
+            error
+        );
+
+        history.innerHTML = `
+            <div class="empty-state">
+                Action history unavailable.
+            </div>
+        `;
+    }
+};
+
+
+function renderAdvancedInvestigation(data) {
+
+    const workspace =
+        document.getElementById(
+            "advanced-investigation"
+        );
+
+    if (!workspace) {
+        return;
+    }
+
+    const entity =
+        data.entity || {};
+
+    const investigation =
+        data.investigation || {};
+
+    const risk =
+        data.risk || {};
+
+    const context =
+        data.context || {};
+
+    const attackChain =
+        data.attack_chain || [];
+
+    const relationships =
+        data.relationships || [];
+
+    const mitre =
+        data.mitre || [];
+
+    const iocs =
+        data.iocs || [];
+
+    const correlation =
+        data.evidence_correlation || {};
+
+    const properties =
+        entity.properties || {};
+
+    const isIncident =
+        context.is_incident === true ||
+        entity.type === "INCIDENT";
+
+    const attackStory =
+        properties.attack_story ||
+        entity.attack_story ||
+        "";
+
+    const sourceIp =
+        properties.source_ip ||
+        entity.source_ip ||
+        "—";
+
+    const targetAsset =
+        properties.target_asset ||
+        entity.target_asset ||
+        "—";
+
+    const severity =
+        properties.severity ||
+        entity.severity ||
+        "UNKNOWN";
+
+    const status =
+        properties.status ||
+        entity.status ||
+        "UNKNOWN";
+
+    const riskScore =
+        risk.entity_risk ??
+        entity.risk ??
+        0;
+
+    const detectionCount =
+        investigation.detection_count ??
+        correlation.detection_count ??
+        0;
+
+    const mitreCount =
+        investigation.mitre_count ??
+        correlation.mitre_count ??
+        mitre.length;
+
+    const timelineCount =
+        investigation.timeline_count ??
+        correlation.timeline_count ??
+        (data.timeline || []).length;
+
+    const recommendedAction =
+        investigation.recommended_action ||
+        "MONITOR";
+
+    const actionClass =
+        recommendedAction === "ESCALATE"
+            ? "decision-critical"
+            : recommendedAction === "INVESTIGATE"
+                ? "decision-high"
+                : "decision-monitor";
+
+    const actionDescription =
+        recommendedAction === "ESCALATE"
+            ? "High-risk incident context requires escalation in the controlled SOC workflow."
+            : recommendedAction === "INVESTIGATE"
+                ? "The entity has sufficient risk or relationship context to warrant analyst investigation."
+                : "Continue monitoring and collect additional telemetry.";
+
+    const detectionEvidence =
+        correlation.detection_evidence || [];
+
+    const mitreEvidence =
+        correlation.mitre_evidence || [];
+
+    const correlationSignals =
+        correlation.correlation_signals || [];
+
+    const evidenceStrength =
+        correlation.evidence_strength ||
+        "UNKNOWN";
+
+    workspace.innerHTML = `
+
+        <div class="investigation-divider"></div>
+
+        ${
+            isIncident
+                ? `
+                    <div class="investigation-box incident-evidence">
+
+                        <div class="section-label">
+                            INCIDENT EVIDENCE
+                        </div>
+
+                        <h4>
+                            Analyst Context
+                        </h4>
+
+                        <div class="evidence-grid">
+
+                            <div class="evidence-item evidence-wide">
+                                <span>ATTACK STORY</span>
+                                <strong>
+                                    ${
+                                        attackStory
+                                            ? escapeHtml(attackStory)
+                                            : "No attack story available."
+                                    }
+                                </strong>
+                            </div>
+
+                            <div class="evidence-item">
+                                <span>SOURCE IP</span>
+                                <strong>${escapeHtml(sourceIp)}</strong>
+                            </div>
+
+                            <div class="evidence-item">
+                                <span>TARGET ASSET</span>
+                                <strong>${escapeHtml(targetAsset)}</strong>
+                            </div>
+
+                            <div class="evidence-item">
+                                <span>SEVERITY</span>
+                                <strong>${escapeHtml(String(severity).toUpperCase())}</strong>
+                            </div>
+
+                            <div class="evidence-item">
+                                <span>STATUS</span>
+                                <strong>${escapeHtml(String(status).toUpperCase())}</strong>
+                            </div>
+
+                            <div class="evidence-item">
+                                <span>RISK SCORE</span>
+                                <strong>${escapeHtml(riskScore)} / 100</strong>
+                            </div>
+
+                            <div class="evidence-item">
+                                <span>RELATED DETECTIONS</span>
+                                <strong>${escapeHtml(detectionCount)}</strong>
+                            </div>
+
+                            <div class="evidence-item">
+                                <span>MITRE TECHNIQUES</span>
+                                <strong>${escapeHtml(mitreCount)}</strong>
+                            </div>
+
+                            <div class="evidence-item">
+                                <span>TIMELINE EVENTS</span>
+                                <strong>${escapeHtml(timelineCount)}</strong>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="investigation-box evidence-correlation">
+
+                        <div class="section-label">
+                            EVIDENCE CORRELATION
+                        </div>
+
+                        <h4>
+                            Correlated Security Signals
+                        </h4>
+
+                        <div class="correlation-summary">
+
+                            <div class="correlation-strength">
+                                <span>EVIDENCE STRENGTH</span>
+                                <strong>
+                                    ${escapeHtml(evidenceStrength)}
+                                </strong>
+                            </div>
+
+                            <div class="correlation-summary-stat">
+                                <span>DETECTIONS</span>
+                                <strong>
+                                    ${escapeHtml(detectionEvidence.length)}
+                                </strong>
+                            </div>
+
+                            <div class="correlation-summary-stat">
+                                <span>MITRE</span>
+                                <strong>
+                                    ${escapeHtml(mitreEvidence.length)}
+                                </strong>
+                            </div>
+
+                            <div class="correlation-summary-stat">
+                                <span>TIMELINE</span>
+                                <strong>
+                                    ${escapeHtml(correlation.timeline_count ?? timelineCount)}
+                                </strong>
+                            </div>
+
+                        </div>
+
+                        <div class="correlation-columns">
+
+                            <div class="correlation-column">
+
+                                <div class="correlation-column-title">
+                                    DETECTION EVIDENCE
+                                </div>
+
+                                ${
+                                    detectionEvidence.length
+                                        ? detectionEvidence.map(item => `
+                                            <div class="correlation-item">
+
+                                                <div class="correlation-item-main">
+                                                    <strong>
+                                                        ${escapeHtml(item.detection_name || "Unknown Detection")}
+                                                    </strong>
+
+                                                    <span>
+                                                        ${escapeHtml(item.entity_id || "—")}
+                                                    </span>
+                                                </div>
+
+                                                <div class="correlation-item-meta">
+                                                    <span>
+                                                        ${escapeHtml(String(item.severity || "UNKNOWN").toUpperCase())}
+                                                    </span>
+
+                                                    <span>
+                                                        Confidence:
+                                                        ${escapeHtml(
+                                                            Math.round(
+                                                                Number(item.confidence || 0) * 100
+                                                            )
+                                                        )}%
+                                                    </span>
+
+                                                    <span>
+                                                        Source:
+                                                        ${escapeHtml(item.source_ip || "—")}
+                                                    </span>
+                                                </div>
+
+                                            </div>
+                                        `).join("")
+                                        : `
+                                            <div class="correlation-empty">
+                                                No detection evidence available.
+                                            </div>
+                                        `
+                                }
+
+                            </div>
+
+                            <div class="correlation-column">
+
+                                <div class="correlation-column-title">
+                                    MITRE EVIDENCE
+                                </div>
+
+                                ${
+                                    mitreEvidence.length
+                                        ? mitreEvidence.map(item => `
+                                            <div class="correlation-item">
+
+                                                <div class="correlation-item-main">
+                                                    <strong>
+                                                        ${escapeHtml(item.technique_id || item.title || "Unknown")}
+                                                    </strong>
+
+                                                    <span>
+                                                        ${escapeHtml(item.entity_id || "—")}
+                                                    </span>
+                                                </div>
+
+                                                <div class="correlation-item-meta">
+                                                    <span>
+                                                        MAPPED
+                                                    </span>
+
+                                                    <span>
+                                                        Confidence: 100%
+                                                    </span>
+                                                </div>
+
+                                            </div>
+                                        `).join("")
+                                        : `
+                                            <div class="correlation-empty">
+                                                No MITRE evidence available.
+                                            </div>
+                                        `
+                                }
+
+                            </div>
+
+                        </div>
+
+                        <div class="correlation-signals">
+
+                            <div class="correlation-column-title">
+                                CORRELATION SIGNALS
+                            </div>
+
+                            ${
+                                correlationSignals.length
+                                    ? correlationSignals.map((signal, index) => `
+                                        <div class="correlation-signal">
+
+                                            <span class="signal-index">
+                                                ${index + 1}
+                                            </span>
+
+                                            <span>
+                                                ${escapeHtml(signal)}
+                                            </span>
+
+                                        </div>
+                                    `).join("")
+                                    : `
+                                        <div class="correlation-empty">
+                                            No correlation signals available.
+                                        </div>
+                                    `
+                            }
+
+                        </div>
+
+                    </div>
+                `
+                : ""
+        }
+
+
+        <!-- =====================================================
+             PHASE 7.2 — EVIDENCE & ARTIFACT EXPLORER
+             ===================================================== -->
+
+        ${
+            isIncident
+                ? `
+                    <div class="investigation-box evidence-artifact-explorer">
+
+                        <div class="section-label">
+                            EVIDENCE & ARTIFACT EXPLORER
+                        </div>
+
+                        <h4>
+                            Investigation Artifacts
+                        </h4>
+
+                        <div class="artifact-summary">
+
+                            <div class="artifact-summary-item">
+                                <span>DETECTIONS</span>
+                                <strong>
+                                    ${escapeHtml(detectionEvidence.length)}
+                                </strong>
+                            </div>
+
+                            <div class="artifact-summary-item">
+                                <span>MITRE TECHNIQUES</span>
+                                <strong>
+                                    ${escapeHtml(mitreEvidence.length)}
+                                </strong>
+                            </div>
+
+                            <div class="artifact-summary-item">
+                                <span>IOCS</span>
+                                <strong>
+                                    ${escapeHtml(iocs.length)}
+                                </strong>
+                            </div>
+
+                            <div class="artifact-summary-item">
+                                <span>EVIDENCE STRENGTH</span>
+                                <strong>
+                                    ${escapeHtml(evidenceStrength)}
+                                </strong>
+                            </div>
+
+                        </div>
+
+
+                        <div class="artifact-section">
+
+                            <div class="correlation-column-title">
+                                DETECTION ARTIFACTS
+                            </div>
+
+                            ${
+                                detectionEvidence.length
+                                    ? `
+                                        <div class="artifact-list">
+
+                                            ${
+                                                detectionEvidence.map(item => `
+                                                    <div class="artifact-card">
+
+                                                        <div class="artifact-card-header">
+
+                                                            <div>
+                                                                <span class="artifact-type">
+                                                                    DETECTION
+                                                                </span>
+
+                                                                <strong>
+                                                                    ${escapeHtml(
+                                                                        item.detection_name ||
+                                                                        "Unknown Detection"
+                                                                    )}
+                                                                </strong>
+                                                            </div>
+
+                                                            <span class="artifact-severity">
+                                                                ${escapeHtml(
+                                                                    String(
+                                                                        item.severity ||
+                                                                        "UNKNOWN"
+                                                                    ).toUpperCase()
+                                                                )}
+                                                            </span>
+
+                                                        </div>
+
+
+                                                        <div class="artifact-card-grid">
+
+                                                            <div>
+                                                                <span>ENTITY</span>
+                                                                <code>
+                                                                    ${escapeHtml(
+                                                                        item.entity_id ||
+                                                                        "—"
+                                                                    )}
+                                                                </code>
+                                                            </div>
+
+                                                            <div>
+                                                                <span>SOURCE IP</span>
+                                                                <code>
+                                                                    ${escapeHtml(
+                                                                        item.source_ip ||
+                                                                        "—"
+                                                                    )}
+                                                                </code>
+                                                            </div>
+
+                                                            <div>
+                                                                <span>CONFIDENCE</span>
+                                                                <strong>
+                                                                    ${escapeHtml(
+                                                                        Math.round(
+                                                                            Number(
+                                                                                item.confidence ||
+                                                                                0
+                                                                            ) * 100
+                                                                        )
+                                                                    )}%
+                                                                </strong>
+                                                            </div>
+
+                                                            <div>
+                                                                <span>TIMESTAMP</span>
+                                                                <strong>
+                                                                    ${escapeHtml(
+                                                                        item.timestamp ||
+                                                                        "—"
+                                                                    )}
+                                                                </strong>
+                                                            </div>
+
+                                                        </div>
+
+                                                    </div>
+                                                `).join("")
+                                            }
+
+                                        </div>
+                                    `
+                                    : `
+                                        <div class="correlation-empty">
+                                            No detection artifacts available.
+                                        </div>
+                                    `
+                            }
+
+                        </div>
+
+
+                        <div class="artifact-section">
+
+                            <div class="correlation-column-title">
+                                MITRE ARTIFACTS
+                            </div>
+
+                            ${
+                                mitreEvidence.length
+                                    ? `
+                                        <div class="artifact-list">
+
+                                            ${
+                                                mitreEvidence.map(item => `
+                                                    <div class="artifact-card">
+
+                                                        <div class="artifact-card-header">
+
+                                                            <div>
+                                                                <span class="artifact-type">
+                                                                    MITRE ATT&CK
+                                                                </span>
+
+                                                                <strong>
+                                                                    ${escapeHtml(
+                                                                        item.technique_id ||
+                                                                        item.title ||
+                                                                        "Unknown Technique"
+                                                                    )}
+                                                                </strong>
+                                                            </div>
+
+                                                            <span class="artifact-severity">
+                                                                MAPPED
+                                                            </span>
+
+                                                        </div>
+
+
+                                                        <div class="artifact-card-grid">
+
+                                                            <div>
+                                                                <span>ENTITY</span>
+                                                                <code>
+                                                                    ${escapeHtml(
+                                                                        item.entity_id ||
+                                                                        "—"
+                                                                    )}
+                                                                </code>
+                                                            </div>
+
+                                                            <div>
+                                                                <span>TECHNIQUE</span>
+                                                                <code>
+                                                                    ${escapeHtml(
+                                                                        item.technique_id ||
+                                                                        "—"
+                                                                    )}
+                                                                </code>
+                                                            </div>
+
+                                                            <div>
+                                                                <span>TITLE</span>
+                                                                <strong>
+                                                                    ${escapeHtml(
+                                                                        item.title ||
+                                                                        item.technique_id ||
+                                                                        "—"
+                                                                    )}
+                                                                </strong>
+                                                            </div>
+
+                                                            <div>
+                                                                <span>MAPPING</span>
+                                                                <strong>
+                                                                    CONFIRMED
+                                                                </strong>
+                                                            </div>
+
+                                                        </div>
+
+                                                    </div>
+                                                `).join("")
+                                            }
+
+                                        </div>
+                                    `
+                                    : `
+                                        <div class="correlation-empty">
+                                            No MITRE artifacts available.
+                                        </div>
+                                    `
+                            }
+
+                        </div>
+
+
+                        <div class="artifact-section">
+
+                            <div class="correlation-column-title">
+                                IOC ARTIFACTS
+                            </div>
+
+                            ${
+                                iocs.length
+                                    ? `
+                                        <div class="artifact-list">
+
+                                            ${
+                                                iocs.map(item => `
+                                                    <div class="artifact-card">
+
+                                                        <div class="artifact-card-header">
+
+                                                            <div>
+                                                                <span class="artifact-type">
+                                                                    IOC
+                                                                </span>
+
+                                                                <strong>
+                                                                    ${escapeHtml(
+                                                                        item.label ||
+                                                                        item.value ||
+                                                                        item.id ||
+                                                                        "Unknown IOC"
+                                                                    )}
+                                                                </strong>
+                                                            </div>
+
+                                                        </div>
+
+
+                                                        <div class="artifact-card-grid">
+
+                                                            <div>
+                                                                <span>ENTITY</span>
+                                                                <code>
+                                                                    ${escapeHtml(
+                                                                        item.id ||
+                                                                        "—"
+                                                                    )}
+                                                                </code>
+                                                            </div>
+
+                                                            <div>
+                                                                <span>TYPE</span>
+                                                                <strong>
+                                                                    ${escapeHtml(
+                                                                        item.type ||
+                                                                        "IOC"
+                                                                    )}
+                                                                </strong>
+                                                            </div>
+
+                                                            <div>
+                                                                <span>VALUE</span>
+                                                                <code>
+                                                                    ${escapeHtml(
+                                                                        item.value ||
+                                                                        item.label ||
+                                                                        "—"
+                                                                    )}
+                                                                </code>
+                                                            </div>
+
+                                                        </div>
+
+                                                    </div>
+                                                `).join("")
+                                            }
+
+                                        </div>
+                                    `
+                                    : `
+                                        <div class="correlation-empty">
+                                            No IOC artifacts associated with this incident.
+                                        </div>
+                                    `
+                            }
+
+                        </div>
+
+
+                        <div class="artifact-section">
+
+                            <div class="correlation-column-title">
+                                PRIMARY ARTIFACTS
+                            </div>
+
+                            <div class="artifact-primary-grid">
+
+                                <div class="artifact-primary-card">
+
+                                    <span>
+                                        SOURCE IP
+                                    </span>
+
+                                    <code>
+                                        ${escapeHtml(sourceIp)}
+                                    </code>
+
+                                    <small>
+                                        Primary investigation origin
+                                    </small>
+
+                                </div>
+
+
+                                <div class="artifact-primary-card">
+
+                                    <span>
+                                        TARGET ASSET
+                                    </span>
+
+                                    <strong>
+                                        ${escapeHtml(targetAsset)}
+                                    </strong>
+
+                                    <small>
+                                        Primary investigation target
+                                    </small>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+                `
+                : ""
+        }
+
+
+        <div class="investigation-box investigation-actions-box">
+            <div class="investigation-box-title">
+                INVESTIGATION ACTION LAYER
+            </div>
+
+            <div class="investigation-box-subtitle">
+                Controlled analyst actions
+            </div>
+
+            <div class="action-safety-banner">
+                <strong>LAB / SIMULATION MODE</strong>
+                <span>
+                    Actions are recorded for investigation workflow.
+                    No real containment or destructive response is executed.
+                </span>
+            </div>
+
+            <div class="action-controls">
+                <div class="action-field">
+                    <label for="investigation-analyst">
+                        ANALYST
+                    </label>
+
+                    <input
+                        id="investigation-analyst"
+                        type="text"
+                        value="SOC_ANALYST"
+                        maxlength="255"
+                        autocomplete="off"
+                    >
+                </div>
+
+                <div class="action-field action-field-wide">
+                    <label for="investigation-action-reason">
+                        REASON / NOTE
+                    </label>
+
+                    <input
+                        id="investigation-action-reason"
+                        type="text"
+                        maxlength="2000"
+                        placeholder="Enter analyst reasoning..."
+                        autocomplete="off"
+                    >
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button
+                    type="button"
+                    class="investigation-action-button"
+                    data-action="ACKNOWLEDGE"
+                    onclick="window.performInvestigationAction('ACKNOWLEDGE')"
+                >
+                    ACKNOWLEDGE
+                </button>
+
+                <button
+                    type="button"
+                    class="investigation-action-button"
+                    data-action="INVESTIGATE"
+                    onclick="window.performInvestigationAction('INVESTIGATE')"
+                >
+                    INVESTIGATE
+                </button>
+
+                <button
+                    type="button"
+                    class="investigation-action-button"
+                    data-action="ESCALATE"
+                    onclick="window.performInvestigationAction('ESCALATE')"
+                >
+                    ESCALATE
+                </button>
+
+                <button
+                    type="button"
+                    class="investigation-action-button"
+                    data-action="REQUEST_CONTAINMENT"
+                    onclick="window.performInvestigationAction('REQUEST_CONTAINMENT')"
+                >
+                    REQUEST CONTAINMENT
+                </button>
+
+                <button
+                    type="button"
+                    class="investigation-action-button"
+                    data-action="CLOSE"
+                    onclick="window.performInvestigationAction('CLOSE')"
+                >
+                    CLOSE
+                </button>
+
+                <button
+                    type="button"
+                    class="investigation-action-button"
+                    data-action="ADD_NOTE"
+                    onclick="window.performInvestigationAction('ADD_NOTE')"
+                >
+                    ADD NOTE
+                </button>
+            </div>
+
+            <div
+                id="investigation-action-status"
+                class="investigation-action-status hidden"
+            ></div>
+
+
+<div class="investigation-box phase77-workflow-box">
+    <div class="investigation-box-title">CASE WORKFLOW</div>
+    <div class="investigation-box-subtitle">
+        Controlled investigation state management
+    </div>
+
+    <div class="phase77-workflow-banner">
+        <strong>LAB / SIMULATION MODE</strong>
+        <span>
+            Case-state changes are recorded as analyst workflow actions.
+            No real-world containment or response is executed.
+        </span>
+    </div>
+
+    <div class="phase77-workflow-grid">
+        <div class="phase77-workflow-card">
+            <div class="phase77-workflow-label">CURRENT CASE STATE</div>
+            <div id="phase77-current-state" class="phase77-workflow-value">
+                UNKNOWN
+            </div>
+        </div>
+
+        <div class="phase77-workflow-card">
+            <div class="phase77-workflow-label">INCIDENT KEY</div>
+            <div id="phase77-incident-key" class="phase77-workflow-value">
+                —
+            </div>
+        </div>
+
+        <div class="phase77-workflow-card">
+            <div class="phase77-workflow-label">WORKFLOW MODE</div>
+            <div class="phase77-workflow-value">
+                LAB / SIMULATION
+            </div>
+        </div>
+    </div>
+
+    <div class="phase77-status-title">
+        CASE STATE CONTROLS
+    </div>
+
+    <div class="phase77-status-controls">
+        <button
+            type="button"
+            class="phase77-status-button"
+            data-workflow-action="ACKNOWLEDGE"
+            onclick="window.performInvestigationWorkflowAction('ACKNOWLEDGE')"
+        >
+            ACKNOWLEDGED
+        </button>
+
+        <button
+            type="button"
+            class="phase77-status-button"
+            data-workflow-action="INVESTIGATE"
+            onclick="window.performInvestigationWorkflowAction('INVESTIGATE')"
+        >
+            INVESTIGATING
+        </button>
+
+        <button
+            type="button"
+            class="phase77-status-button"
+            data-workflow-action="ESCALATE"
+            onclick="window.performInvestigationWorkflowAction('ESCALATE')"
+        >
+            ESCALATED
+        </button>
+
+        <button
+            type="button"
+            class="phase77-status-button"
+            data-workflow-action="CLOSE"
+            onclick="window.performInvestigationWorkflowAction('CLOSE')"
+        >
+            CLOSED
+        </button>
+    </div>
+
+    <div id="phase77-workflow-status" class="phase77-workflow-status hidden"></div>
+</div>
+
+<div class="investigation-box phase88-response-box">
+
+    <div class="investigation-box-title">
+        RESPONSE & CONTAINMENT
+    </div>
+
+    <div class="investigation-box-subtitle">
+        Controlled SOC response simulation
+    </div>
+
+    <div class="phase88-safety-banner">
+        <strong>LAB / SIMULATION ONLY</strong>
+        <span>
+            No real firewall, endpoint, account, or session changes are executed.
+        </span>
+    </div>
+
+    <div class="phase88-response-grid">
+
+        <div class="phase88-response-field">
+            <label for="phase88-response-action">
+                RESPONSE ACTION
+            </label>
+
+            <select id="phase88-response-action">
+                <option value="BLOCK_IP">BLOCK IP</option>
+                <option value="ISOLATE_ENDPOINT">
+                    ISOLATE ENDPOINT
+                </option>
+                <option value="QUARANTINE_ENDPOINT">
+                    QUARANTINE ENDPOINT
+                </option>
+                <option value="DISABLE_ACCOUNT">
+                    DISABLE ACCOUNT
+                </option>
+                <option value="REVOKE_SESSION">
+                    REVOKE SESSION
+                </option>
+            </select>
+        </div>
+
+        <div class="phase88-response-field">
+            <label for="phase88-response-target">
+                TARGET
+            </label>
+
+            <input
+                id="phase88-response-target"
+                type="text"
+                placeholder="192.168.56.70 / LAB-ENDPOINT"
+                autocomplete="off"
+            >
+        </div>
+
+        <div class="phase88-response-field phase88-response-wide">
+            <label for="phase88-response-reason">
+                RESPONSE REASON
+            </label>
+
+            <input
+                id="phase88-response-reason"
+                type="text"
+                placeholder="Reason for simulated response..."
+                maxlength="2000"
+                autocomplete="off"
+            >
+        </div>
+
+    </div>
+
+    <div class="phase88-response-buttons">
+
+        <button
+            type="button"
+            class="phase88-response-button"
+            onclick="window.phase88RequestApproval()"
+        >
+            REQUEST APPROVAL
+        </button>
+
+        <button
+            type="button"
+            class="phase88-response-button phase88-primary"
+            onclick="window.phase88ExecuteResponse()"
+        >
+            EXECUTE LAB SIMULATION
+        </button>
+
+    </div>
+
+    <div
+        id="phase88-response-status"
+        class="phase88-response-status hidden"
+    ></div>
+
+</div>
+
+
+<div class="investigation-action-history">
+                <div class="investigation-box-title">
+                    ACTION HISTORY
+                </div>
+
+                <div
+                    id="investigation-action-history"
+                    class="investigation-action-history-list"
+                >
+                    <div class="empty-state">
+                        No analyst actions recorded.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="investigation-grid">
+
+            <div class="investigation-box">
+
+                <div class="section-label">
+                    ATTACK CHAIN
+                </div>
+
+                <h4>
+                    Relationship Path
+                </h4>
+
+                ${
+                    attackChain.length
+                        ? attackChain.map(item => `
+                            <div class="attack-chain-row">
+
+                                <div class="attack-chain-node">
+                                    <span>
+                                        ${escapeHtml(item.source?.type || "ENTITY")}
+                                    </span>
+
+                                    <strong>
+                                        ${escapeHtml(item.source?.label || item.source?.id || "Unknown")}
+                                    </strong>
+                                </div>
+
+                                <div class="attack-chain-arrow">
+                                    →
+                                </div>
+
+                                <div class="attack-chain-relation">
+                                    ${escapeHtml(item.relationship || "RELATED_TO")}
+                                </div>
+
+                                <div class="attack-chain-node">
+                                    <span>
+                                        ${escapeHtml(item.target?.type || "ENTITY")}
+                                    </span>
+
+                                    <strong>
+                                        ${escapeHtml(item.target?.label || item.target?.id || "Unknown")}
+                                    </strong>
+                                </div>
+
+                            </div>
+                        `).join("")
+                        : `
+                            <div class="empty-state">
+                                No attack-chain relationships available.
+                            </div>
+                        `
+                }
+
+            </div>
+
+            <div class="investigation-box phase75-mitre-investigation">
+
+                <div class="section-label">
+                    MITRE ATT&CK INVESTIGATION
+                </div>
+
+                <h4>
+                    Mapped Attack Techniques
+                </h4>
+
+                <div class="phase75-mitre-summary">
+
+                    <div class="phase75-mitre-summary-item">
+                        <span>TECHNIQUES</span>
+                        <strong>
+                            ${escapeHtml(mitre.length)}
+                        </strong>
+                    </div>
+
+                    <div class="phase75-mitre-summary-item">
+                        <span>CONFIRMED MAPPINGS</span>
+                        <strong>
+                            ${escapeHtml(
+                                mitre.filter(item =>
+                                    relationships.some(
+                                        relationship =>
+                                            relationship.target === item.id &&
+                                            relationship.type === "MAPPED_TO"
+                                    )
+                                ).length
+                            )}
+                        </strong>
+                    </div>
+
+                </div>
+
+                <div class="phase75-mitre-list">
+
+                    ${
+                        mitre.length
+                            ? mitre.map(item => {
+
+                                const techniqueId =
+                                    String(
+                                        item.properties?.technique_id ||
+                                        item.label ||
+                                        item.id ||
+                                        "—"
+                                    );
+
+                                const entityId =
+                                    String(
+                                        item.id ||
+                                        ""
+                                    );
+
+                                const mapping =
+                                    relationships.find(
+                                        relationship =>
+                                            relationship.target === entityId &&
+                                            relationship.type === "MAPPED_TO"
+                                    );
+
+                                const source =
+                                    mapping?.source ||
+                                    `incident:${properties.incident_id || ""}`;
+
+                                const confidence =
+                                    mapping?.confidence !== undefined
+                                        ? Math.round(
+                                            Number(
+                                                mapping.confidence
+                                            ) * 100
+                                        )
+                                        : 100;
+
+                                return `
+                                    <div
+                                        class="phase75-mitre-card"
+                                    >
+
+                                        <div class="phase75-mitre-card-header">
+
+                                            <div>
+
+                                                <span class="phase75-mitre-card-label">
+                                                    MITRE TECHNIQUE
+                                                </span>
+
+                                                <strong>
+                                                    ${escapeHtml(
+                                                        techniqueId
+                                                    )}
+                                                </strong>
+
+                                                <code>
+                                                    ${escapeHtml(
+                                                        entityId
+                                                    )}
+                                                </code>
+
+                                            </div>
+
+                                            <span class="phase75-mitre-confirmed">
+                                                CONFIRMED
+                                            </span>
+
+                                        </div>
+
+                                        <div class="phase75-mitre-card-grid">
+
+                                            <div>
+                                                <span>
+                                                    MAPPING
+                                                </span>
+
+                                                <strong>
+                                                    MAPPED_TO
+                                                </strong>
+                                            </div>
+
+                                            <div>
+                                                <span>
+                                                    SOURCE
+                                                </span>
+
+                                                <code>
+                                                    ${escapeHtml(
+                                                        source
+                                                    )}
+                                                </code>
+                                            </div>
+
+                                            <div>
+                                                <span>
+                                                    CONFIDENCE
+                                                </span>
+
+                                                <strong>
+                                                    ${escapeHtml(
+                                                        confidence
+                                                    )}%
+                                                </strong>
+                                            </div>
+
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            class="phase75-mitre-pivot"
+                                            data-mitre-entity="${escapeHtml(
+                                                entityId
+                                            )}"
+                                        >
+                                            PIVOT TO TECHNIQUE
+                                        </button>
+
+                                    </div>
+                                `;
+                            }).join("")
+                            : `
+                                <div class="empty-state">
+                                    No MITRE technique mapped.
+                                </div>
+                            `
+                    }
+
+                </div>
+
+            </div>
+
+            <div class="investigation-box">
+
+                <div class="section-label">
+                    THREAT INTELLIGENCE
+                </div>
+
+                <h4>
+                    IOC Context
+                </h4>
+
+                ${
+                    iocs.length
+                        ? iocs.map(ioc => `
+                            <div class="ioc-item">
+
+                                <strong>
+                                    ${escapeHtml(ioc.value || ioc.label || ioc.id || "IOC")}
+                                </strong>
+
+                                <span>
+                                    ${escapeHtml(ioc.reputation || "UNKNOWN")}
+                                </span>
+
+                            </div>
+                        `).join("")
+                        : `
+                            <div class="empty-state">
+                                No IOC context.
+                            </div>
+                        `
+                }
+
+            </div>
+
+            <div class="investigation-box analyst-decision">
+
+                <div class="section-label">
+                    ANALYST ASSESSMENT
+                </div>
+
+                <h4>
+                    Investigation Priority
+                </h4>
+
+                <div class="decision-state ${actionClass}">
+                    ${escapeHtml(recommendedAction)}
+                </div>
+
+                <p>
+                    ${escapeHtml(actionDescription)}
+                </p>
+
+            </div>
+
+        </div>
+    `;
+}
+
+
+/* =========================================================
+   CLOSE INVESTIGATION
+   ========================================================= */
+
+function closeInvestigation() {
+
+    document
+        .getElementById(
+            "investigation-panel"
+        )
+        .classList.add(
+            "hidden"
+        );
+}
+
+
+document
+    .getElementById(
+        "close-investigation"
+    )
+    .addEventListener(
+        "click",
+        closeInvestigation
+    );
+
+
+/* =========================================================
+   REFRESH
+   ========================================================= */
+
+async function refreshAll() {
+
+    const button =
+        document.getElementById(
+            "refresh-btn"
+        );
+
+    button.textContent =
+        "LOADING...";
+
+    button.disabled = true;
+
+    try {
+
+        await Promise.all([
+            loadOverview(),
+            loadAlerts(),
+            loadGraph()
+        ]);
+
+    } finally {
+
+        button.textContent =
+            "REFRESH";
+
+        button.disabled = false;
+    }
+}
+
+
+document
+    .getElementById(
+        "refresh-btn"
+    )
+    .addEventListener(
+        "click",
+        refreshAll
+    );
+
+
+/* =========================================================
+   INITIAL LOAD
+   ========================================================= */
+
+refreshAll();
+
+
+/* =========================================================
+   AUTO REFRESH
+   ========================================================= */
+
+setInterval(
+    loadAlerts,
+    10000
+);
+
+
+setInterval(
+    loadOverview,
+    30000
+);
+
+
+setInterval(
+    loadGraph,
+    15000
+);
+
+</script>
+
+
+<script>
+
+/* =========================================================
+   PHASE 7.5 — MITRE PIVOT
+   ========================================================= */
+
+document.addEventListener(
+    "click",
+    function phase75MitrePivotHandler(event) {
+
+        const button =
+            event.target.closest(
+                "[data-mitre-entity]"
+            );
+
+        if (!button) {
+            return;
+        }
+
+        const entityId =
+            button.dataset.mitreEntity;
+
+        if (!entityId) {
+            return;
+        }
+
+        if (
+            typeof window.pivotInvestigationEntity ===
+            "function"
+        ) {
+
+            window.pivotInvestigationEntity(
+                entityId
+            );
+
+        } else {
+
+            openInvestigation(
+                entityId
+            );
+
+        }
+
+    }
+);
+
+</script>
+
+
+
+<script>
+
+/* =========================================================
+   PHASE 7.9 — INVESTIGATION INTELLIGENCE
+   ========================================================= */
+
+async function loadInvestigationIntelligence(entityId) {
+
+    if (!entityId) {
+        return;
+    }
+
+    if (!String(entityId).startsWith("incident:")) {
+        return;
+    }
+
+    try {
+
+        const response = await fetch(
+            `/api/soc/investigation-intelligence/${encodeURIComponent(entityId)}`
+        );
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        renderInvestigationIntelligence(data);
+
+    } catch (error) {
+
+        console.error(
+            "Investigation intelligence error:",
+            error
+        );
+
+        const container =
+            document.getElementById(
+                "investigation-intelligence"
+            );
+
+        if (container) {
+
+            container.innerHTML = `
+                <div class="empty-state">
+                    Investigation intelligence unavailable.
+                </div>
+            `;
+        }
+    }
+}
+
+
+function renderInvestigationIntelligence(data) {
+
+    const workspace =
+        document.getElementById(
+            "advanced-investigation"
+        );
+
+    if (!workspace || !data) {
+        return;
+    }
+
+    const existing =
+        document.getElementById(
+            "investigation-intelligence"
+        );
+
+    if (existing) {
+        existing.remove();
+    }
+
+    const risk =
+        data.risk || {};
+
+    const evidence =
+        data.evidence || {};
+
+    const correlation =
+        data.correlation || {};
+
+    const findings =
+        data.key_findings || [];
+
+    const nextSteps =
+        data.analyst_next_steps || [];
+
+    const riskScore =
+        Number(risk.score || 0);
+
+    const riskLevel =
+        String(risk.level || "UNKNOWN");
+
+    const evidenceStrength =
+        String(evidence.strength || "UNKNOWN");
+
+    const confidence =
+        String(evidence.confidence || "UNKNOWN");
+
+    const detections =
+        correlation.detections || [];
+
+    const mitre =
+        correlation.mitre_techniques || [];
+
+    const signals =
+        correlation.signals || [];
+
+    workspace.insertAdjacentHTML(
+        "beforeend",
+        `
+        <div
+            id="investigation-intelligence"
+            class="investigation-intelligence"
+        >
+
+            <div class="investigation-intelligence-header">
+
+                <div>
+                    <div class="section-label">
+                        PHASE 7.9
+                    </div>
+
+                    <h3>
+                        Investigation Intelligence
+                    </h3>
+
+                    <div class="section-subtitle">
+                        Analyst-generated evidence and correlation summary
+                    </div>
+                </div>
+
+                <span class="lab-badge">
+                    LAB / SIMULATION
+                </span>
+
+            </div>
+
+
+            <div class="intelligence-metrics">
+
+                <div class="intelligence-card">
+                    <div class="intelligence-label">
+                        RISK
+                    </div>
+
+                    <div class="intelligence-value">
+                        ${riskScore}
+                    </div>
+
+                    <div class="intelligence-meta">
+                        ${escapeHtml(riskLevel)}
+                    </div>
+                </div>
+
+
+                <div class="intelligence-card">
+                    <div class="intelligence-label">
+                        EVIDENCE
+                    </div>
+
+                    <div class="intelligence-value">
+                        ${escapeHtml(evidenceStrength)}
+                    </div>
+
+                    <div class="intelligence-meta">
+                        ${evidence.evidence_points || 0}
+                        evidence points
+                    </div>
+                </div>
+
+
+                <div class="intelligence-card">
+                    <div class="intelligence-label">
+                        CONFIDENCE
+                    </div>
+
+                    <div class="intelligence-value">
+                        ${escapeHtml(confidence)}
+                    </div>
+
+                    <div class="intelligence-meta">
+                        ${Math.round(
+                            Number(
+                                evidence.average_detection_confidence || 0
+                            ) * 100
+                        )}%
+                        detection confidence
+                    </div>
+                </div>
+
+
+                <div class="intelligence-card">
+                    <div class="intelligence-label">
+                        DETECTIONS
+                    </div>
+
+                    <div class="intelligence-value">
+                        ${evidence.detection_count || 0}
+                    </div>
+
+                    <div class="intelligence-meta">
+                        ${escapeHtml(
+                            detections.join(", ")
+                        )}
+                    </div>
+                </div>
+
+            </div>
+
+
+            <div class="intelligence-grid">
+
+                <div class="intelligence-section">
+
+                    <div class="intelligence-section-title">
+                        Key Findings
+                    </div>
+
+                    <ul class="intelligence-list">
+
+                        ${findings.map(
+                            item => `
+                                <li>
+                                    ${escapeHtml(String(item))}
+                                </li>
+                            `
+                        ).join("")}
+
+                    </ul>
+
+                </div>
+
+
+                <div class="intelligence-section">
+
+                    <div class="intelligence-section-title">
+                        MITRE ATT&CK
+                    </div>
+
+                    <div class="mitre-tags">
+
+                        ${
+                            mitre.length
+                                ? mitre.map(
+                                    technique => `
+                                        <span class="mitre-tag">
+                                            ${escapeHtml(String(technique))}
+                                        </span>
+                                    `
+                                ).join("")
+                                : `
+                                    <span class="empty-state">
+                                        No MITRE techniques mapped.
+                                    </span>
+                                `
+                        }
+
+                    </div>
+
+                </div>
+
+
+                <div class="intelligence-section">
+
+                    <div class="intelligence-section-title">
+                        Correlation Signals
+                    </div>
+
+                    <ul class="intelligence-list">
+
+                        ${signals.map(
+                            item => `
+                                <li>
+                                    ${escapeHtml(String(item))}
+                                </li>
+                            `
+                        ).join("")}
+
+                    </ul>
+
+                </div>
+
+
+                <div class="intelligence-section">
+
+                    <div class="intelligence-section-title">
+                        Analyst Next Steps
+                    </div>
+
+                    <ol class="intelligence-list">
+
+                        ${nextSteps.map(
+                            item => `
+                                <li>
+                                    ${escapeHtml(String(item))}
+                                </li>
+                            `
+                        ).join("")}
+
+                    </ol>
+
+                </div>
+
+            </div>
+
+
+            <div class="intelligence-conclusion">
+
+                <div class="intelligence-section-title">
+                    Investigation Conclusion
+                </div>
+
+                <div class="intelligence-conclusion-text">
+                    ${escapeHtml(
+                        String(
+                            data.conclusion ||
+                            "No conclusion available."
+                        )
+                    )}
+                </div>
+
+            </div>
+
+        </div>
+        `
+    );
+}
+
+</script>
+
+
+<style>
+
+/* =========================================================
+   PHASE 7.9 — INVESTIGATION INTELLIGENCE
+   ========================================================= */
+
+.investigation-intelligence {
+    margin-top: 24px;
+    padding: 24px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    background: rgba(255,255,255,0.025);
+}
+
+.investigation-intelligence-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 22px;
+}
+
+.investigation-intelligence-header h3 {
+    margin: 4px 0 6px;
+}
+
+.intelligence-metrics {
+    display: grid;
+    grid-template-columns:
+        repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.intelligence-card {
+    padding: 16px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
+.intelligence-label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    opacity: 0.65;
+}
+
+.intelligence-value {
+    margin-top: 7px;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.intelligence-meta {
+    margin-top: 5px;
+    font-size: 12px;
+    opacity: 0.65;
+    line-height: 1.4;
+}
+
+.intelligence-grid {
+    display: grid;
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.intelligence-section {
+    padding: 18px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
+.intelligence-section-title {
+    margin-bottom: 12px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.intelligence-list {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.intelligence-list li {
+    margin-bottom: 8px;
+    line-height: 1.5;
+    font-size: 13px;
+}
+
+.mitre-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.mitre-tag {
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    background: rgba(255,255,255,0.07);
+}
+
+.intelligence-conclusion {
+    margin-top: 14px;
+    padding: 18px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
+.intelligence-conclusion-text {
+    line-height: 1.6;
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+@media (max-width: 900px) {
+
+    .intelligence-metrics {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    .intelligence-grid {
+        grid-template-columns:
+            1fr;
+    }
+}
+
+@media (max-width: 600px) {
+
+    .intelligence-metrics {
+        grid-template-columns:
+            1fr;
+    }
+}
+
+</style>
+
+
+<script>
+/* =========================================================
+   PHASE 8.8 — RESPONSE UI
+   ========================================================= */
+
+window.phase88GetIncidentId = function () {
+
+    const match = window.location.pathname.match(
+        /(?:incident|investigation)[/:_-]*(\d+)/
+    );
+
+    if (match) {
+        return Number(match[1]);
+    }
+
+    if (window.currentInvestigationEntity?.id) {
+        const value =
+            String(
+                window.currentInvestigationEntity.id
+            );
+
+        const found =
+            value.match(/(\d+)$/);
+
+        if (found) {
+            return Number(found[1]);
+        }
+    }
+
+    return 2;
+};
+
+
+window.phase88SetStatus = function (
+    message,
+    success = true
+) {
+
+    const element =
+        document.getElementById(
+            "phase88-response-status"
+        );
+
+    if (!element) {
+        return;
+    }
+
+    element.classList.remove("hidden");
+
+    element.textContent = message;
+
+    element.style.borderColor =
+        success
+            ? "rgba(80, 220, 150, 0.45)"
+            : "rgba(255, 90, 90, 0.45)";
+};
+
+
+window.phase88Payload = function () {
+
+    const action =
+        document.getElementById(
+            "phase88-response-action"
+        )?.value || "BLOCK_IP";
+
+    const target =
+        document.getElementById(
+            "phase88-response-target"
+        )?.value.trim();
+
+    const reason =
+        document.getElementById(
+            "phase88-response-reason"
+        )?.value.trim();
+
+    return {
+        action_type: action,
+        target: target,
+        incident_id:
+            window.phase88GetIncidentId(),
+        analyst:
+            document.getElementById(
+                "investigation-analyst"
+            )?.value.trim() || "SOC_ANALYST",
+        reason: reason || "LAB response validation"
+    };
+};
+
+
+window.phase88RequestApproval = async function () {
+
+    const payload =
+        window.phase88Payload();
+
+    if (!payload.target) {
+
+        window.phase88SetStatus(
+            "Target is required.",
+            false
+        );
+
+        return;
+    }
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/response/approval/request",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+                    body:
+                        JSON.stringify(payload)
+                }
+            );
+
+        const data =
+            await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                data?.detail?.reason ||
+                "Approval request failed."
+            );
+        }
+
+        window.phase88SetStatus(
+            "APPROVAL REQUESTED — response is pending analyst approval.",
+            true
+        );
+
+    } catch (error) {
+
+        window.phase88SetStatus(
+            `Approval error: ${error.message}`,
+            false
+        );
+    }
+};
+
+
+window.phase88ExecuteResponse = async function () {
+
+    const payload =
+        window.phase88Payload();
+
+    if (!payload.target) {
+
+        window.phase88SetStatus(
+            "Target is required.",
+            false
+        );
+
+        return;
+    }
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/response/approval/decision",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+                    body:
+                        JSON.stringify({
+                            ...payload,
+                            reason: "APPROVE"
+                        })
+                }
+            );
+
+        const approval =
+            await response.json();
+
+        if (!response.ok) {
+            throw new Error(
+                approval?.detail?.reason ||
+                "Approval failed."
+            );
+        }
+
+        let endpoint =
+            "/api/response/contain";
+
+        if (
+            payload.action_type ===
+                "ISOLATE_ENDPOINT" ||
+            payload.action_type ===
+                "QUARANTINE_ENDPOINT"
+        ) {
+            endpoint =
+                "/api/response/endpoint";
+        }
+
+        if (
+            payload.action_type ===
+                "DISABLE_ACCOUNT" ||
+            payload.action_type ===
+                "REVOKE_SESSION"
+        ) {
+            endpoint =
+                "/api/response/identity";
+        }
+
+        const executionResponse =
+            await fetch(
+                endpoint,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+                    body:
+                        JSON.stringify({
+                            ...payload,
+                            reason:
+                                "Approved LAB simulation"
+                        })
+                }
+            );
+
+        const result =
+            await executionResponse.json();
+
+        if (!executionResponse.ok) {
+            throw new Error(
+                result?.detail?.reason ||
+                "Response execution failed."
+            );
+        }
+
+        window.phase88SetStatus(
+            `${payload.action_type} — LAB SIMULATION COMPLETED.`,
+            true
+        );
+
+    } catch (error) {
+
+        window.phase88SetStatus(
+            `Response error: ${error.message}`,
+            false
+        );
+    }
+};
+</script>
+
+</body>
+</html>

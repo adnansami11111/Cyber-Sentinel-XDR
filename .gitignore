@@ -1,0 +1,22 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+.env.*
+*.db
+*.sqlite
+*.sqlite3
+data/runtime/
+reports/generated/
+logs/
+*.log
+.vscode/
+.idea/
+.DS_Store
+
+# Local development backups
+frontend/*.backup
+
+# Safe environment template
+!.env.example
