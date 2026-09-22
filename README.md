@@ -1,5 +1,11 @@
 # Cyber Sentinel XDR
 
+[![Python](https://img.shields.io/badge/Python-3.13-blue)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-API-green)](https://fastapi.tiangolo.com/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue)](https://www.docker.com/)
+[![Tests](https://img.shields.io/badge/Tests-45%20Passed-brightgreen)](#testing)
+[![Mode](https://img.shields.io/badge/Mode-LAB-orange)](#security-design)
+
 A defensive, lab-focused Extended Detection and Response (XDR) platform for security monitoring, threat detection, threat intelligence, investigation, attack simulation, and incident reporting.
 
 ## Overview
