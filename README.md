@@ -78,3 +78,9 @@ It combines:
       ┌─────────────┐   ┌─────────────┐   ┌─────────────┐
       │Investigation│   │Response LAB │   │   Reports   │
       └─────────────┘   └─────────────┘   └─────────────┘
+
+## SOC Dashboard
+
+The SOC Command Center provides a centralized view of security activity, including incidents, alerts, threat activity, detection streams, risk distribution, suspicious sources, and MITRE ATT&CK activity.
+
+![Cyber Sentinel XDR SOC Dashboard](docs/screenshots/soc-dashboard.png)
