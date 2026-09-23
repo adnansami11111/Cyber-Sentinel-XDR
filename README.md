@@ -84,3 +84,15 @@ It combines:
 The SOC Command Center provides a centralized view of security activity, including incidents, alerts, threat activity, detection streams, risk distribution, suspicious sources, and MITRE ATT&CK activity.
 
 ![Cyber Sentinel XDR SOC Dashboard](docs/screenshots/soc-dashboard.png)
+
+
+## Screenshots
+
+### SOC Dashboard
+![SOC Dashboard](docs/screenshots/soc-dashboard.png)
+
+### Incident Report — Overview
+![Incident Report Overview](docs/screenshots/incident-report-overview.png)
+
+### Incident Report — Detection & MITRE ATT&CK
+![Incident Report Detection and MITRE](docs/screenshots/incident-report-detection-mitre.png)
